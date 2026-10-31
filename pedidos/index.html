@@ -916,6 +916,42 @@ function waOrderMsg(o){
   const lines=o.items.map(i=>{const c=colorById(i.colorId);return `• ${c?c.name:i.colorId} — ${i.size} × ${i.qty}`;}).join("\n");
   return `Hola San Isidro 🌸 Acabo de hacer el pedido ${o.number} en cultivosanisidro.com/pedidos\n\nCliente: ${o.client.name}\nCiudad: ${o.shipping.city}\n${lines}\n\nTotal: ${money(t.total)}${o.payMode==="credito"?" (crédito)":" — envío comprobante de pago"}`;
 }
+/* ---------- Aviso de pedido nuevo al equipo (correo a ventas@) ---------- */
+const NOTIFY_EMAIL="ventas@cultivossanisidro.com";
+async function notifyNewOrder(o){
+  try{
+    const t=orderTotals(o);
+    const c=o.client||{}, s=o.shipping||{};
+    const fd=new FormData();
+    fd.append("_subject",`Nuevo pedido ${o.number} — ${c.name||"cliente"} — ${money(t.total)}`);
+    fd.append("_template","table");
+    fd.append("_captcha","false");
+    if(c.email) fd.append("_replyto",c.email);
+    fd.append("Pedido",o.number);
+    fd.append("Registrado en el sistema",o.pendingSync?"NO — falló el registro; el cliente debe enviarlo por WhatsApp":"Sí");
+    fd.append("Cliente",c.name||"");
+    fd.append("Contacto",c.contact||"");
+    fd.append("Celular / WhatsApp",c.phone||"");
+    fd.append("Correo",c.email||"");
+    fd.append("Documento",(c.doctype||"")+" "+(c.doc||""));
+    fd.append("Ciudad",(s.city||"")+(s.dept?", "+s.dept:""));
+    fd.append("Dirección",s.address||"");
+    fd.append("Productos",o.items.map(i=>{const col=colorById(i.colorId);return `${col?col.name:i.colorId} — ${i.size} × ${i.qty}`;}).join(" | "));
+    fd.append("Tallos",String(t.stems));
+    fd.append("Total",money(t.total));
+    fd.append("Forma de pago",o.payMode==="credito"?"Crédito (pendiente de aprobación)":"Transferencia — comprobante adjunto");
+    fd.append("Comprobante",o.receipt?(o.receipt.dataUrl?"Adjunto a este correo y visible en el panel":"Muy pesado para adjuntar — pedirlo por WhatsApp"):"No aplica (crédito)");
+    fd.append("Panel",location.origin+location.pathname+"#/admin");
+    if(o.receipt&&o.receipt.dataUrl){
+      try{
+        const blob=await (await fetch(o.receipt.dataUrl)).blob();
+        fd.append("attachment",blob,o.receipt.name||"comprobante.jpg");
+      }catch(_){}
+    }
+    const ctl=new AbortController(); setTimeout(()=>ctl.abort(),20000);
+    await fetch("https://formsubmit.co/ajax/"+NOTIFY_EMAIL,{method:"POST",headers:{"Accept":"application/json"},body:fd,signal:ctl.signal});
+  }catch(_){/* el aviso es un respaldo: el pedido ya quedó guardado o fue enviado por WhatsApp */}
+}
 /* ---------- Persistencia local ---------- */
 const LS_KEY="si_db_v1";
 function saveDB(){
@@ -2588,6 +2624,7 @@ async function submitOrder(){
   }catch(_){
     o.pendingSync=true; /* sin internet o servicio caído: el respaldo es WhatsApp */
   }
+  notifyNewOrder(o); /* aviso por correo a ventas@ (no bloquea la confirmación) */
   DB.ui.lastOrder=o;
   s.cart=[];s.receipt=null;s.payMode=null;
   DB.ui.checkStep=5;
