@@ -584,6 +584,74 @@ fieldset.fs{min-width:0;width:100%} .form-grid{min-width:0} .field input,.field 
 #datosForm .action-row{padding:12px 0}
 @media (max-width:960px){ .foot-top{grid-template-columns:1fr 1fr} .how-steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:720px){ .wrap.section{padding-left:16px;padding-right:16px} fieldset.fs{padding:16px 14px 18px} .form-grid{gap:12px} #datosForm .action-row{flex-direction:column-reverse;gap:10px} #datosForm .action-row .btn{width:100%} .foot-top{grid-template-columns:1fr;gap:26px} .how-steps{grid-template-columns:1fr} .claims{grid-template-columns:repeat(2,minmax(0,1fr))} .card>table.tbl{display:block;overflow-x:auto;white-space:nowrap} .foot-bottom{flex-direction:column;align-items:flex-start} .hero .eyebrow{font-size:10px} }
+/* Condiciones del pedido: tarjetas en vez de párrafo */
+.cond-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}
+.cond-tiles.cond-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cond-tile{background:var(--beige);border-radius:var(--radius);padding:18px 18px 16px;min-width:0}
+.cond-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:var(--forest);color:#FFFFFF;font-family:var(--display);font-weight:700;font-size:14px;margin-bottom:12px}
+.cond-tile>b{display:block;font-family:var(--display);font-weight:700;font-size:15px;color:var(--forest);margin-bottom:6px}
+.cond-tile p{font-size:13.5px;line-height:1.55;color:var(--ink-soft);margin:0}
+.cond-tile p b{color:var(--ink)}
+@media (max-width:960px){.cond-tiles,.cond-tiles.cond-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.cond-tiles,.cond-tiles.cond-3{grid-template-columns:1fr}}
+/* ===== Panel administrativo con el mismo diseño blanco/beige/azul ===== */
+.admin-shell{background:#FFFFFF}
+.admin-side{background:var(--forest-deep);color:#C9CBE3;padding:22px 12px;font-family:var(--sans)}
+.admin-side .who{padding:4px 10px 18px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.12)}
+.admin-side .who b{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em}
+.admin-side .who small{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9EE2BE;font-weight:700}
+.admin-side a{border-left:none;border-radius:12px;padding:11px 12px;margin:2px 0;font-size:14px;font-weight:600;color:#DADCF0;letter-spacing:0}
+.admin-side a:hover{background:rgba(255,255,255,.08);color:#FFFFFF}
+.admin-side a.on{background:#FFFFFF;color:var(--forest);font-weight:700}
+.admin-side a.on .cnt{background:var(--forest);color:#FFFFFF}
+.admin-side .cnt{background:#9EE2BE;color:var(--forest-deep);border-radius:999px;font-weight:700;font-size:11.5px;padding:2px 9px}
+.admin-main{padding:34px 34px 90px}
+.admin-main h2{font-size:28px;margin-bottom:6px}
+.admin-main h3{font-size:19px;color:var(--forest)}
+.admin-main .btn{letter-spacing:0}
+.admin-sub{color:var(--ink-soft);font-size:14px;line-height:1.6;margin-bottom:22px}
+.kpis{gap:12px;grid-template-columns:repeat(5,minmax(0,1fr))}
+.kpi{background:var(--beige);border:none;border-radius:var(--radius);padding:20px 16px;text-align:left}
+.kpi small{font-size:12px;letter-spacing:0!important;text-transform:none;color:var(--ink-soft);font-weight:600}
+.kpi b{font-family:var(--display);font-weight:800;font-size:clamp(24px,2.2vw,32px);letter-spacing:-.02em;margin-top:6px;overflow-wrap:anywhere}
+.admin-toolbar{gap:10px;margin-bottom:18px}
+.admin-toolbar input,.admin-toolbar select{border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;background:#FFFFFF;font-size:14px}
+.admin-toolbar input:focus,.admin-toolbar select:focus{outline:2px solid var(--forest);outline-offset:1px;border-color:var(--forest)}
+.admin-main .card{border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.admin-main .card .card{box-shadow:none}
+.tbl th{font-size:12px;letter-spacing:0;text-transform:none;color:var(--ink-soft);font-weight:700;background:var(--beige);padding:12px 14px;border-bottom:none}
+.tbl td{padding:12px 14px}
+.admin-main .tbl tbody tr:hover td{background:#FAF8F3}
+.badge{border:none;background:var(--beige);color:var(--forest)}
+.badge.st-pago,.badge.st-entregado{background:#E7F2EC;color:#174D36}
+.badge.st-verificar,.badge.st-pfact{background:#FBF1DC;color:#7A5A1C}
+.badge.st-cancelado{background:#FBE3E3;color:#8E2525}
+.badge.st-recibido{background:#EEF0F7;color:#4F5468}
+.timeline li{border-left:2px solid var(--line)}
+.timeline li::before{border-radius:999px;background:var(--forest);border-color:#FFFFFF;left:-7px;width:12px;height:12px}
+.drawer{border-radius:var(--radius-lg) 0 0 var(--radius-lg);padding:28px}
+.note.blue{background:var(--beige);border-left:3px solid var(--forest);color:var(--ink);flex-wrap:wrap;line-height:1.5}
+.note.blue b{white-space:nowrap}
+@media (max-width:720px){.note.blue .btn{margin-left:0!important}}
+.chart-card{border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow)}
+.chart-card h4{font-size:14px!important;font-weight:700!important;text-transform:none;letter-spacing:-.01em!important;color:var(--forest);margin-bottom:16px}
+.bars .bar{background:var(--forest);border-radius:6px 6px 0 0}
+.hbar .track{border-radius:999px;border:none;background:var(--beige);height:12px}
+.hbar .fill{border-radius:999px}
+@media (max-width:960px){.chart-grid{grid-template-columns:1fr}}
+.login-wrap{margin:70px auto}
+.login-wrap .card{background:var(--beige);border:none;box-shadow:none;border-radius:var(--radius-lg);padding:34px 30px}
+.login-wrap .field input{background:#FFFFFF}
+.admin-main input[type="number"],.admin-main input[type="text"],.admin-main input:not([type]),.admin-main select,.admin-main textarea{border-radius:10px!important;border:1.5px solid var(--line)!important;background:#FFFFFF}
+@media (max-width:960px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-side{padding:0 8px;border-radius:0}
+  .admin-side a{border-radius:999px;margin:8px 2px;padding:9px 14px;font-size:13px;border-bottom:none}
+  .admin-side a.on{border-bottom:none}
+  .admin-main{padding:22px 16px 90px}
+  .admin-main .card>table.tbl,.admin-main .tbl-scroll{display:block;overflow-x:auto;max-width:100%}
+  .drawer{border-radius:0}
+}
 /* Encabezado: evitar que el menu se salga de la pantalla en portatiles */
 @media (min-width:961px){
   .site-inner{max-width:1400px}
@@ -1467,7 +1535,12 @@ function viewCart(){
     ${t.conserv?`<div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0"><span>Conservante/Comida (${t.comidaUnits} × ${money(CONSERVANTE)})</span><b>${money(t.conserv)}</b></div>`:""}
     <div style="display:flex;justify-content:space-between;font-size:17px;padding-top:8px;border-top:1.5px solid var(--line);color:var(--forest)"><span><b>Total</b></span><b>${money(t.total)}</b></div>
   </div>
-  <p class="note">Pedido mínimo por color: <b>${MIN_TALLOS_COLOR} tallos</b>. Cada línea se despacha como una caja (cargo de ${money(CAJA_CHARGE)} por caja). En "Conservante/Comida" indica cuántos sobres quieres agregar a esa caja (opcional, $150 cada uno). El transporte se paga <b>contraentrega</b> a Coordinadora Mercantil (entrega de 2 a 3 días) y no está incluido en este total.</p>
+  <div class="cond-tiles" aria-label="Condiciones del pedido">
+    <div class="cond-tile"><span class="cond-ico">10</span><b>Pedido mínimo</b><p><b>${MIN_TALLOS_COLOR} tallos</b> por color. Con 20 o más tallos por caja no hay recargo.</p></div>
+    <div class="cond-tile"><span class="cond-ico">▢</span><b>Cajas</b><p>Cada color viaja en su propia caja. Cargo de <b>${money(CAJA_CHARGE)}</b> por caja.</p></div>
+    <div class="cond-tile"><span class="cond-ico">✿</span><b>Conservante / Comida</b><p>Opcional. Indica cuántos sobres quieres por caja, a <b>${money(CONSERVANTE)}</b> cada uno.</p></div>
+    <div class="cond-tile"><span class="cond-ico">→</span><b>Transporte</b><p>Coordinadora Mercantil, <b>2 a 3 días</b>. Flete <b>contraentrega</b>: no está incluido en este total.</p></div>
+  </div>
   <div class="action-row" style="justify-content:space-between">
     <button class="btn btn-ghost" data-step="1">← Seguir agregando colores</button>
     <button class="btn btn-primary btn-lg" data-step="3">Continuar con los datos →</button>
@@ -1688,7 +1761,11 @@ function viewTiempos(){
       <div class="card card-pad"><h3 style="font-size:20px;color:var(--forest)">Pedidos antes de las 10:00 a. m.</h3><p style="margin-top:8px;color:var(--ink-soft)">Se despachan <b>ese mismo día</b>, una vez confirmado el pago.</p></div>
       <div class="card card-pad"><h3 style="font-size:20px;color:var(--forest)">Pedidos después de las 10:00 a. m.</h3><p style="margin-top:8px;color:var(--ink-soft)">Se despachan <b>al día siguiente</b>, una vez confirmado el pago.</p></div>
     </div>
-    <p class="note">Enviamos con <b>Coordinadora Mercantil</b>, flete <b>contraentrega</b>, con tiempo de entrega de <b>2 a 3 días</b> según la ciudad de destino y la cobertura de la transportadora.</p>
+    <div class="cond-tiles cond-3">
+      <div class="cond-tile"><span class="cond-ico">▢</span><b>Transportadora</b><p>Enviamos con <b>Coordinadora Mercantil</b> a todo el país, según su cobertura.</p></div>
+      <div class="cond-tile"><span class="cond-ico">$</span><b>Flete</b><p>Se paga <b>contraentrega</b> directamente a la transportadora. No va en tu pedido.</p></div>
+      <div class="cond-tile"><span class="cond-ico">→</span><b>Tiempo de entrega</b><p><b>2 a 3 días</b> después del despacho, según la ciudad de destino.</p></div>
+    </div>
     <div class="card" style="margin-top:18px;max-width:640px"><div class="tbl-scroll"><table class="tbl">
       <thead><tr><th>Ciudad</th><th>Departamento</th><th>Tiempo estimado</th></tr></thead>
       <tbody>${DB.cities.map(c=>`<tr><td><b>${esc(c.city)}</b></td><td>${esc(c.dept)}</td><td>${esc(c.days)}</td></tr>`).join("")}</tbody>
@@ -2329,8 +2406,14 @@ function adPrecios(){
   </div>
   <div class="card card-pad">
     <h4 style="font-family:var(--serif);font-size:19px;color:var(--forest);margin-bottom:10px">Reglas comerciales</h4>
-    <p style="font-size:14px;color:var(--ink-soft);line-height:1.9">Pedido mínimo por color: <b>${MIN_TALLOS_COLOR} tallos</b> · Cajas con menos de 20 tallos: recargo <b>${money(RECARGO_CAJA_PEQ)}</b> · Cargo por caja: <b>${money(CAJA_CHARGE)}</b> por línea/caja · Conservante/Comida (opcional): <b>$${CONSERVANTE}</b> por unidad, la cantidad la define el cliente por caja · Flor en ramos: <b>+$100</b> por tallo · Despacho por Coordinadora, entrega de <b>2 a 3 días</b>, flete <b>contraentrega</b>.</p>
-    <p style="font-size:12.5px;color:var(--ink-faint)">Asignación de proceso: tonalidades "light" → pintado claro · tonalidades normal/dark y técnicas → pintado fuerte y especial. Se puede afinar color por color en su editor.</p>
+    <div class="cond-tiles cond-3" style="margin-top:4px">
+      <div class="cond-tile"><span class="cond-ico">10</span><b>Pedido mínimo</b><p><b>${MIN_TALLOS_COLOR} tallos</b> por color.</p></div>
+      <div class="cond-tile"><span class="cond-ico">▢</span><b>Cajas</b><p>Cargo de <b>${money(CAJA_CHARGE)}</b> por línea/caja. Cajas con menos de 20 tallos: recargo <b>${money(RECARGO_CAJA_PEQ)}</b>.</p></div>
+      <div class="cond-tile"><span class="cond-ico">✿</span><b>Conservante / Comida</b><p>Opcional, <b>$${CONSERVANTE}</b> por unidad. La cantidad por caja la define el cliente.</p></div>
+      <div class="cond-tile"><span class="cond-ico">❀</span><b>Flor en ramos</b><p><b>+$100</b> por tallo.</p></div>
+      <div class="cond-tile"><span class="cond-ico">→</span><b>Transporte</b><p>Coordinadora Mercantil, entrega de <b>2 a 3 días</b>, flete <b>contraentrega</b>.</p></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-faint);margin-top:14px">Asignación de proceso: tonalidades "light" → pintado claro · tonalidades normal/dark y técnicas → pintado fuerte y especial. Se puede afinar color por color en su editor.</p>
   </div>`;
 }
 
