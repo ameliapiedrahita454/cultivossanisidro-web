@@ -547,6 +547,43 @@ h1,h2,h3,h4,.serif,.brand-word,.claim b,.order-no{font-family:var(--display)!imp
 .okmark{background:var(--forest);color:#fff;border-radius:999px}
 footer.site{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
 @media (max-width:760px){ #app>section.section.wrap:nth-of-type(even){padding:44px 18px;border-radius:var(--radius)} .claims{grid-template-columns:repeat(2,1fr)} }
+
+/* ===== Ajustes UX: pie de pagina, pasos, cifras, tablas en celular ===== */
+footer.site{padding:56px 0 40px;margin-top:80px;color:#C9CBE3;font-weight:400}
+.foot-top{display:grid;grid-template-columns:1.7fr 1fr 1fr 1.3fr;gap:34px;align-items:start}
+.foot-logo{color:#FFFFFF!important;display:block;margin-bottom:12px}
+.foot-logo small{color:#9EE2BE!important}
+.foot-brand p{margin:0 0 18px;max-width:40ch;font-size:14px;line-height:1.6}
+.foot-cta{display:flex;gap:10px;flex-wrap:wrap}
+.btn-light{background:#FFFFFF;color:var(--forest-deep)}
+.btn-wa{background:#1F6B4A;color:#FFFFFF}
+footer h5{font-family:var(--sans)!important;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#AEB3DA;font-weight:700;margin-bottom:12px}
+footer a{color:#F1F2FA;font-weight:600;font-size:14px;padding:5px 0;text-decoration:none;display:block}
+footer a:hover{color:#9EE2BE}
+.foot-addr{display:block;padding:5px 0;font-size:14px;color:#C9CBE3}
+.foot-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px 24px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.14);margin-top:36px;padding-top:18px;font-size:12.5px;color:#AEB3DA}
+.foot-bottom a{display:inline;color:#AEB3DA;font-weight:600;font-size:12.5px;padding:0}
+.how-steps{grid-template-columns:repeat(4,minmax(0,1fr))}
+.how-step{border-radius:var(--radius);box-shadow:var(--shadow)}
+.how-step::before{content:counter(paso);font-family:var(--display);font-weight:800;font-size:13px;color:#FFFFFF;background:var(--forest);width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.claims{grid-template-columns:repeat(4,minmax(0,1fr))}
+.claim b{font-size:clamp(22px,2.4vw,32px);overflow-wrap:anywhere}
+.okmark{width:58px;height:58px;border-radius:999px;background:var(--forest);color:#FFFFFF;display:inline-flex;align-items:center;justify-content:center;font-size:26px;border:none;margin:0 auto 14px}
+.cart-bar .btn-hydr{border-radius:999px;font-weight:700}
+fieldset.fs{background:var(--beige);border-radius:var(--radius);padding:22px 22px 24px;margin-bottom:18px}
+fieldset.fs legend{font-family:var(--display)!important;font-weight:700;font-size:20px;letter-spacing:-.01em;color:var(--forest);padding:0 8px;margin-left:-8px}
+.fs-sub{font-size:13.5px;color:var(--ink-soft);margin:4px 0 16px}
+.field input,.field select,.field textarea{background:#FFFFFF}
+.radio-card{background:#FFFFFF}
+.note.green{background:#E7F2EC;border-left-color:var(--green);color:#174D36}
+.btn-sm{padding:9px 14px;font-size:12.5px}
+.foot-cta a.btn{display:inline-flex;padding:11px 18px;font-size:13.5px}
+.card-pad>b,.card>b{font-family:var(--display)!important;font-weight:700;color:var(--forest);font-size:18px}
+fieldset.fs{min-width:0;width:100%} .form-grid{min-width:0} .field input,.field select,.field textarea{width:100%;min-width:0}
+.wrap.section{padding-left:20px;padding-right:20px}
+#datosForm .action-row{padding:12px 0}
+@media (max-width:960px){ .foot-top{grid-template-columns:1fr 1fr} .how-steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:720px){ .wrap.section{padding-left:16px;padding-right:16px} fieldset.fs{padding:16px 14px 18px} .form-grid{gap:12px} #datosForm .action-row{flex-direction:column-reverse;gap:10px} #datosForm .action-row .btn{width:100%} .foot-top{grid-template-columns:1fr;gap:26px} .how-steps{grid-template-columns:1fr} .claims{grid-template-columns:repeat(2,minmax(0,1fr))} .card>table.tbl{display:block;overflow-x:auto;white-space:nowrap} .foot-bottom{flex-direction:column;align-items:flex-start} .hero .eyebrow{font-size:10px} }
 /* Encabezado: evitar que el menu se salga de la pantalla en portatiles */
 @media (min-width:961px){
   .site-inner{max-width:1400px}
@@ -594,26 +631,38 @@ footer.site{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
 <div id="toasts" aria-live="polite"></div>
 
 <footer class="site">
-  <div class="wrap cols">
-    <div>
-      <h5>San Isidro · Hydrangeas Farming</h5>
-      <p>Cultivamos flores con pasión y experiencia.<br>Más de 30 años haciendo de la hortensia nuestro oficio y nuestra especialidad.</p>
-      <p style="margin-top:12px;font-size:13px;color:#BFB79F">La Ceja, Antioquia · +57 311 367 6027 · ventas@cultivossanisidro.com · @CultivoSanIsidro</p>
-      <p style="margin-top:6px;font-size:12px;color:#8E8360">Alma del Bosque S.A.S. · NIT 901.935.760</p>
+  <div class="wrap foot-top">
+    <div class="foot-brand">
+      <div class="brand-word foot-logo">SAN ISIDRO<small>HYDRANGEAS FARMING</small></div>
+      <p>Cultivamos hortensias en La Ceja, Antioquia, desde 1997. Pide directo al cultivo y recibe en toda Colombia.</p>
+      <div class="foot-cta"><a class="btn btn-light" href="#/pedir">Hacer pedido</a><a class="btn btn-wa" href="https://wa.me/573113676027" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></div>
     </div>
     <div>
       <h5>Pedidos</h5>
-      <a href="https://cultivosanisidro.com/blog/">Blog del cultivo</a>
-      <a href="#/pedir">Hacer pedido</a>
-      <a href="#/como-funciona">Cómo funciona</a>
-      <a href="#/tiempos">Tiempos de entrega</a>
+      <a href="#/pedir">Ver colores y pedir</a>
+      <a href="#/rapido">Pedido rápido</a>
       <a href="#/mis-pedidos">Mis pedidos</a>
+      <a href="#/tiempos">Tiempos de entrega</a>
     </div>
     <div>
-      <h5>Empresa</h5>
+      <h5>Ayuda</h5>
+      <a href="#/como-funciona">Cómo funciona</a>
       <a href="#/contacto">Contacto</a>
-      <a href="#/admin">Panel administrativo</a>
+      <a href="https://cultivosanisidro.com/blog/">Blog del cultivo</a>
+      <a href="/">English</a>
     </div>
+    <div>
+      <h5>Contacto</h5>
+      <a href="https://wa.me/573113676027" target="_blank" rel="noopener">+57 311 367 6027</a>
+      <a href="mailto:ventas@cultivossanisidro.com">ventas@cultivossanisidro.com</a>
+      <a href="https://www.instagram.com/CultivoSanIsidro" target="_blank" rel="noopener">@CultivoSanIsidro</a>
+      <span class="foot-addr">La Ceja, Antioquia · Colombia</span>
+    </div>
+  </div>
+  <div class="wrap foot-bottom">
+    <span>Alma del Bosque S.A.S. · NIT 901.935.760</span>
+    <span>Pagos por transferencia Bancolombia · Envíos con Coordinadora Mercantil</span>
+    <a href="#/admin">Acceso equipo</a>
   </div>
 </footer>
 <a class="wa-fab" href="https://wa.me/573113676027" target="_blank" rel="noopener" id="waFab">WhatsApp</a>
@@ -1145,7 +1194,7 @@ function viewHome(){
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="eyebrow">Directo del cultivo · La Ceja, Antioquia · desde 1997</div>
+        <div class="eyebrow">Directo del cultivo · La Ceja, Antioquia</div>
         <h1>255 colores de hortensia, directo del cultivo</h1>
         <div class="script" aria-hidden="true" style="margin:2px 0 6px">de nuestro cultivo</div>
         <p class="sub">Para floristerías, eventos y mayoristas de toda Colombia. Precio por tallo visible, pedido mínimo 10 tallos por color, pago por transferencia o crédito para clientes frecuentes. Despachamos con Coordinadora a todo el país.</p>
@@ -1378,12 +1427,15 @@ function cartTotals(){
 function renderCartBar(){
   const t=cartTotals();
   const root=$("#cartBarRoot");
-  const show=t.lines>0 && DB.ui.checkStep<5 && !route().startsWith("/admin");
+  const onPedir=route().startsWith("/pedir"); const step=DB.ui.checkStep;
+  /* la barra acompaña mientras se eligen flores; en datos, pago y confirmación se oculta para no tapar los botones del paso */
+  const show=t.lines>0 && !route().startsWith("/admin") && !(onPedir && step>=3);
   document.body.classList.toggle("has-cartbar",show);
+  const action=(onPedir&&step===2)?`<button class="btn btn-hydr btn-sm" data-step="3">Continuar con los datos →</button>`:`<button class="btn btn-hydr btn-sm" data-goto-cart>Revisar pedido →</button>`;
   root.innerHTML=show?`<div class="cart-bar"><div class="cart-bar-inner">
     <span class="ct"><b>Mi pedido</b> · ${t.lines} producto${t.lines!==1?"s":""} · ${t.stems} tallos</span>
     <span class="tot">Total<b>${money(t.total)}</b></span>
-    <button class="btn btn-hydr btn-sm" data-goto-cart>Revisar pedido →</button>
+    ${action}
   </div></div>`:"";
 }
 function viewCart(){
@@ -1432,7 +1484,9 @@ function fld(id,label,req,opts={}){
   return `<div class="field ${opts.full?"full":""}" data-f="${id}"><label for="${id}">${label}${req?' <span class="req">*</span>':""}</label>${inp}<span class="err">Este campo es necesario</span></div>`;
 }
 function viewDatos(){
-  const s=DB.session; const c=s.customer||{}; const sh=s.shipping||{}; const b=s.billing||{kind:"Empresa"};
+  const s=DB.session;
+  if(!s.customer){ try{ const p=JSON.parse(localStorage.getItem("si_perfil")||"null"); if(p&&p.customer&&p.customer.name){ s.customer=p.customer; s.shipping=p.shipping||null; s.billing=p.billing||{kind:"Empresa"}; s._perfil=true; } }catch(_){} }
+  const c=s.customer||{}; const sh=s.shipping||{}; const b=s.billing||{kind:"Empresa"};
   const known=DB.clients[0];
   return `
   ${!s.customer?`
@@ -1447,7 +1501,7 @@ function viewDatos(){
       <button type="button" class="btn btn-soft" id="btnBuscarCliente">Buscar mis datos</button>
     </div>
     <p id="lookupMsg" style="font-size:13px;margin:10px 0 0"></p>
-  </div>`:`<div class="note green">✓ Encontramos tus datos${s.customer.name?` de <b>${esc(s.customer.name)}</b>`:""}. Revísalos y ajusta lo que necesites.</div>`}
+  </div>`:`<div class="note green" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span style="flex:1">✓ ${s._perfil?"Cargamos los datos de tu último pedido":"Encontramos tus datos"}${s.customer.name?` de <b>${esc(s.customer.name)}</b>`:""}. Revísalos y ajusta lo que necesites.</span><button type="button" class="btn btn-soft btn-sm" data-clear-datos>Soy otro cliente</button></div>`}
   <form id="datosForm" novalidate>
   <fieldset class="fs"><legend>Datos del cliente</legend>
     <div class="form-grid">
@@ -1618,7 +1672,7 @@ function viewComo(){
     <div class="eyebrow">Cómo funciona</div>
     <h2>De nuestro cultivo a tu mesa de trabajo</h2>
     <p class="lead">Un proceso pensado para que pidas en minutos, sin llamadas ni esperas.</p>
-    <div class="how-steps" style="margin-top:30px;grid-template-columns:repeat(4,1fr)">
+    <div class="how-steps" style="margin-top:30px">
       ${pasos.map(p=>`<div class="how-step"><b>${p[0]}</b><p>${p[1]}</p></div>`).join("")}
     </div>
     <div class="sec-h" style="margin-top:50px"><div class="eyebrow">Preguntas frecuentes</div><h2 style="font-size:clamp(24px,3vw,32px)">Antes de pedir</h2></div>
@@ -2387,6 +2441,7 @@ document.addEventListener("click",async e=>{
     }});
     DB.ui.modal=null;toast("Agregado a tu pedido");render();return;
   }
+  if(d.clearDatos!==undefined){DB.session.customer=null;DB.session.shipping=null;DB.session.billing=null;DB.session._perfil=false;try{localStorage.removeItem("si_perfil")}catch(_){}render();window.scrollTo(0,0);return;}
   if(d.gotoCart!==undefined){DB.ui.checkStep=2;go("/pedir");render();window.scrollTo(0,0);return;}
   if(d.step!==undefined){DB.ui.checkStep=+d.step;track("checkout_step",{step:+d.step});go("/pedir");render();window.scrollTo(0,0);return;}
   if(d.fam!==undefined){DB.ui.cat=d.fam;DB.ui.group="";render();return;}
@@ -2680,6 +2735,8 @@ function bindAfterRender(){
       DB.session.customer={name:$("#c_name").value,contact:$("#c_contact").value,phone:$("#c_phone").value,wa:$("#c_wa").value,email:$("#c_email").value,doctype:$("#c_doctype").value,doc:$("#c_doc").value,type:$("#c_type").value};
       DB.session.shipping={city:$("#s_city").value,dept:$("#s_dept").value,address:$("#s_addr").value,barrio:$("#s_barrio").value,receiver:$("#s_recv").value,receiverPhone:$("#s_rphone").value,notes:$("#s_notes").value};
       DB.session.billing={kind:df.querySelector("[name=bkind]:checked").value,name:$("#b_name").value,doctype:$("#b_doctype").value,doc:$("#b_doc").value,email:$("#b_email").value,address:$("#b_addr").value,city:$("#b_city").value,dept:$("#b_dept").value};
+      try{localStorage.setItem("si_perfil",JSON.stringify({customer:DB.session.customer,shipping:DB.session.shipping,billing:DB.session.billing}));}catch(_){}
+      DB.session._perfil=false;
       DB.ui.checkStep=4;render();window.scrollTo(0,0);
     });
     df.querySelectorAll("[name=bkind]").forEach(r=>r.addEventListener("change",()=>{
