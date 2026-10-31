@@ -516,7 +516,14 @@ footer.site{background:var(--forest-deep)}
 @media (min-width:961px) and (max-width:1200px){ nav.main a[data-nav="/admin"]{display:none} nav.main a[href="/"]{display:none} }
 
 /* ===== Tema v2: titulares sin cursiva, recuadros y bandas beige ===== */
-:root{ --beige:#F3EFE6; --beige-deep:#E9E3D5; --display:"Plus Jakarta Sans","Manrope",system-ui,sans-serif; }
+:root{ --beige:#F3EFE6; --beige-deep:#E9E3D5; --display:"Plus Jakarta Sans","Manrope",system-ui,sans-serif; --serif:"Plus Jakarta Sans","Manrope",system-ui,sans-serif; --script:"Manrope",system-ui,sans-serif; }
+.faq summary{font-family:var(--display);font-weight:700;font-size:16.5px;color:var(--forest)}
+.faq details{background:var(--beige);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;border:none}
+.faq details:first-child{border-top:none}
+.faq summary::after{color:var(--forest)}
+.upload-zone{border:1.5px dashed var(--forest);border-radius:var(--radius);background:var(--beige)}
+.upload-zone .big{font-weight:800;color:var(--forest)}
+nav.main a[href="/"]{color:var(--ink-soft)!important}
 h1,h2,h3,h4,.serif,.brand-word,.claim b,.order-no{font-family:var(--display)!important;font-weight:700;letter-spacing:-.02em}
 .hero h1{font-weight:800}
 .script{font-family:var(--sans)!important;font-size:16px!important;line-height:1.5!important;color:var(--ink-soft)!important;font-weight:500;letter-spacing:0}
@@ -664,9 +671,7 @@ fieldset.fs{min-width:0;width:100%} .form-grid{min-width:0} .field input,.field 
   nav.main a[data-nav="/admin"]{display:none}
 }
 </style>
-<!-- Analítica de visitas (GoatCounter, gratuita y sin cookies): se activa al publicar el dominio.
-     PASO ÚNICO: crear la cuenta en goatcounter.com con el código "sanisidro" (o cambiarlo aquí). -->
-<script data-goatcounter="https://sanisidro.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<!-- Analítica: Google Analytics 4 se carga desde GA_ID en el script principal -->
 </head>
 <body>
 <header class="site">
@@ -684,7 +689,7 @@ fieldset.fs{min-width:0;width:100%} .form-grid{min-width:0} .field input,.field 
       <a href="#/mis-pedidos" data-nav="/mis-pedidos">Mis pedidos</a>
       <a href="#/contacto" data-nav="/contacto">Contacto</a>
       <a href="https://cultivosanisidro.com/blog/">Blog</a>
-      <a href="/" style="color:var(--ink-faint)">English</a>
+      <a href="/">English</a>
       <a href="#/admin" data-nav="/admin" style="color:var(--gold)">Administración</a>
     </nav>
     <a class="btn btn-primary" href="#/pedir">Hacer pedido</a>
@@ -1031,7 +1036,7 @@ function applyState(o,st,who,silent){
 }
 seedData();
 /* ============ Conexión a la base de datos central (Supabase) ============ */
-const GA_ID=""; /* pega aquí el ID de Google Analytics (G-XXXXXXX) para activar la medición */
+const GA_ID="G-R7BF0GVE2H"; /* Google Analytics 4 — propiedad "Cultivos San Isidro" */
 if(GA_ID){const g=document.createElement("script");g.async=true;g.src="https://www.googletagmanager.com/gtag/js?id="+GA_ID;document.head.appendChild(g);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",GA_ID);}
 function track(ev,p){try{if(window.gtag)gtag("event",ev,p||{});}catch(_){}}
 const SB_URL="https://mluvrdqusnbkqsoeuexc.supabase.co";
@@ -2188,21 +2193,21 @@ function adOrdenTrabajo(){
 function adWeb(){
   return `
   <h2>🌐 Audiencia web</h2>
-  <p class="admin-sub">Visitantes del sitio por país y por mes — se mide con GoatCounter (gratuito, sin cookies, cumple privacidad)</p>
-  <div class="note blue" style="margin-top:0">Las métricas reales aparecen cuando el sitio esté publicado en su dominio. Este prototipo abre desde un archivo local, y ahí ningún medidor puede contar visitas.</div>
-  <div class="card card-pad" style="margin-top:18px">
-    <b>Qué vas a ver cuando esté publicado</b>
-    <p style="color:var(--ink-soft);font-size:14.5px;margin-top:8px;line-height:1.9">
-    Visitantes únicos por día, semana y mes · país y ciudad de cada visita · desde qué página o buscador llegaron (Google, ChatGPT, Instagram…) · qué páginas ven más · dispositivo. El tablero vive en <b>sanisidro.goatcounter.com</b> y se consulta desde cualquier navegador.</p>
+  <p class="admin-sub">Visitas, ciudades, origen del tráfico y pedidos del sitio y del portal — medido con Google Analytics 4 (propiedad "Cultivos San Isidro").</p>
+  <div class="cond-tiles cond-3" style="margin-top:0">
+    <div class="cond-tile"><span class="cond-ico">1</span><b>Abre el tablero</b><p>Entra a Google Analytics con la cuenta de Google de la empresa y elige la propiedad <b>Cultivos San Isidro</b>.</p></div>
+    <div class="cond-tile"><span class="cond-ico">2</span><b>Qué mirar</b><p><b>Informes → Adquisición</b>: de dónde llegan (Google, Instagram, WhatsApp, directo). <b>Informes → Usuario → Datos demográficos</b>: país y ciudad.</p></div>
+    <div class="cond-tile"><span class="cond-ico">3</span><b>Ventas</b><p>El portal envía los eventos <b>checkout_step</b> y <b>purchase</b> (número de pedido y valor), visibles en <b>Informes → Interacción → Eventos</b>.</p></div>
+  </div>
+  <div class="card card-pad" style="margin-top:16px">
+    <b>Tablero de Google Analytics</b>
+    <p style="color:var(--ink-soft);font-size:14.5px;margin-top:8px;line-height:1.8">Los datos empiezan a aparecer entre 24 y 48 horas después de la activación. El informe "Tiempo real" muestra quién está en el sitio ahora mismo.</p>
+    <a class="btn btn-primary" style="margin-top:14px" href="https://analytics.google.com/analytics/web/" target="_blank" rel="noopener">Abrir Google Analytics →</a>
+    <a class="btn btn-ghost" style="margin-top:14px;margin-left:8px" href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console →</a>
   </div>
   <div class="card card-pad" style="margin-top:14px">
-    <b>Pasos para activarlo (una sola vez, 15 minutos)</b>
-    <ol style="margin:10px 0 0 20px;color:var(--ink-soft);font-size:14.5px;line-height:2.1">
-      <li>Subir el paquete <b>san-isidro-deploy.zip</b> a Cloudflare Pages o Netlify (gratis). El dominio <b>cultivosanisidro.com</b> ya es tuyo — hoy apunta al sitio de Canva; se cambia desde Canva → Configuración → Dominios para que apunte al nuevo servicio.</li>
-      <li>Crear la cuenta gratuita en <b>goatcounter.com</b> con el código <b>sanisidro</b> — el sitio ya trae el medidor instalado.</li>
-      <li>Registrar el dominio en <b>Google Search Console</b> y <b>Bing Webmaster Tools</b> y subir el archivo <b>sitemap.xml</b> (ya está listo).</li>
-      <li>Cada mes, revisar aquí países y visitas, y en Search Console las palabras con las que te encuentran.</li>
-    </ol>
+    <b>Pendiente (una sola vez)</b>
+    <p style="color:var(--ink-soft);font-size:14.5px;margin-top:8px;line-height:1.8">Registrar <b>cultivosanisidro.com</b> en Google Search Console y en Bing Webmaster Tools y enviar el archivo <b>sitemap.xml</b> (ya existe en el sitio). Así se ve con qué palabras te encuentran en el buscador.</p>
   </div>`;
 }
 
