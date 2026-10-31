@@ -752,7 +752,8 @@ const norm=s=>(s||"").normalize("NFKD").replace(/[̀-ͯ]/g,"").toLowerCase().tri
 function isCreditClient(name){
   const n=norm(name); if(!n)return false;
   if(DB.clients.some(c=>c.credit&&norm(c.name)===n))return true;
-  return CREDIT_CLIENTS.some(cc=>{const m=norm(cc);return n.includes(m)||m.includes(n);});
+  /* solo coincidencia exacta o nombre completo del cliente con credito incluido en lo escrito (evita falsos positivos con nombres cortos) */
+  return CREDIT_CLIENTS.some(cc=>{const m=norm(cc);return m.length>=5&&(n===m||n.includes(m));});
 }
 const AUTH_SALT="sanisidro-2026";
 const USERS={"lorenza": {"name": "Lorenza Piedrahita", "role": "admin", "h": "f561c589add698a472c0876eeacd234c9817e4ead1956f5fe9c76aafc5a77843"}, "amelia": {"name": "Amelia Piedrahita", "role": "admin", "h": "c12042b1026e5782821faaf313de7f2b12aacf31a2236eacb8aebd2a3f0230e0"}, "sandra": {"name": "Sandra Ríos", "role": "ventas", "h": "4dbae11f5ba60deb3db8eab8305ccb0308ba0b872151cca81329cffe9b68e3f4"}, "facturacion": {"name": "Facturación", "role": "fact", "h": "19709ca18349ecd32b1f5555f0bf14bf258233c35d403c6deb7359e4ebbb03e3"}, "sala": {"name": "Sala de preparación", "role": "sala", "h": "20bfcf06bb6d97d4c59b9a9c3a2c66dc0d1db83974e8095b04dbfd9ec489a7d9"}, "despacho": {"name": "Despacho", "role": "desp", "h": "94e67cdef0240a40173ea08ac0ebdcb1527afa007141253141fd54b62bf2a3b6"}};
