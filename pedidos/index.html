@@ -441,6 +441,17 @@ footer a:hover{color:#fff}
 .faq details[open] summary::after{content:"−"}
 .faq p{margin-top:10px;color:var(--ink-soft);font-size:14.5px;line-height:1.7;max-width:68ch}
 .trust-pay{border-left:2px solid var(--forest);background:var(--sage-pale);border-radius:0;padding:14px 18px;font-size:13.5px;color:var(--forest);line-height:1.6;margin-top:14px}
+/* Encabezado: evitar que el menu se salga de la pantalla en portatiles */
+@media (min-width:961px){
+  .site-inner{max-width:1400px}
+  nav.main a{letter-spacing:.14em;padding:9px 8px}
+}
+@media (min-width:961px) and (max-width:1320px){
+  nav.main a{letter-spacing:.08em;font-size:10px;padding:9px 6px}
+}
+@media (min-width:961px) and (max-width:1180px){
+  nav.main a[data-nav="/admin"]{display:none}
+}
 </style>
 <!-- Analítica de visitas (GoatCounter, gratuita y sin cookies): se activa al publicar el dominio.
      PASO ÚNICO: crear la cuenta en goatcounter.com con el código "sanisidro" (o cambiarlo aquí). -->
@@ -2259,8 +2270,8 @@ document.addEventListener("click",async e=>{
     }});
     DB.ui.modal=null;toast("Agregado a tu pedido");render();return;
   }
-  if(d.gotoCart!==undefined){DB.ui.checkStep=2;go("/pedir");render();return;}
-  if(d.step!==undefined){DB.ui.checkStep=+d.step;go("/pedir");render();return;}
+  if(d.gotoCart!==undefined){DB.ui.checkStep=2;go("/pedir");render();window.scrollTo(0,0);return;}
+  if(d.step!==undefined){DB.ui.checkStep=+d.step;go("/pedir");render();window.scrollTo(0,0);return;}
   if(d.fam!==undefined){DB.ui.cat=d.fam;DB.ui.group="";render();return;}
   if(d.clearSearch!==undefined){DB.ui.query="";DB.ui.cat="";DB.ui.group="";render();return;}
 
