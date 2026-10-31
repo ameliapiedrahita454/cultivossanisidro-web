@@ -205,6 +205,7 @@ nav.main a.active{color:var(--forest);border-bottom:1px solid var(--gold)}
 .color-card .info{padding:12px 2px 2px;display:flex;flex-direction:column;gap:2px;flex:1;align-items:center}
 .color-card .info b{font-family:var(--serif);font-size:18px;color:var(--ink);font-weight:500}
 .color-card .info small{color:var(--gold);font-size:9px;letter-spacing:.22em;text-transform:uppercase;margin-top:2px}
+.color-card .pf{margin-top:6px;font-size:13px;color:var(--forest);font-weight:600}
 .color-card .sel{margin-top:9px;font-size:9.5px;font-weight:400;color:var(--forest);letter-spacing:.2em;text-transform:uppercase;border-top:1px solid var(--line);padding-top:8px;width:100%}
 .color-card.is-agotado{cursor:not-allowed}
 .color-card.is-agotado .sel{color:var(--ink-faint)}
@@ -710,6 +711,16 @@ function download(filename,text,mime="text/csv;charset=utf-8"){const blob=new Bl
 
 /* ---------- Motor de pedidos ---------- */
 function orderNumber(){return "SI-"+String(DB.seq++).padStart(6,"0");}
+function despachoHint(){
+  try{
+    const now=new Date(new Date().toLocaleString("en-US",{timeZone:"America/Bogota"}));
+    const dow=now.getDay(); const h=now.getHours(), m=now.getMinutes();
+    if(dow>=1&&dow<=5&&h<10){ const mins=(10*60)-(h*60+m); const hh=Math.floor(mins/60), mm=mins%60; return `Pide en ${hh>0?hh+" h ":""}${mm} min y despachamos hoy mismo`; }
+    if(dow>=1&&dow<=4) return "Pide ahora y despachamos mañana a primera hora";
+    if(dow===5&&h>=10) return "Pide ahora y despachamos el lunes a primera hora";
+    return "Pide ahora y despachamos el lunes a primera hora";
+  }catch(_){ return "Pedidos antes de las 10:00 a. m. se despachan el mismo día"; }
+}
 function estimateDispatch(iso){
   const d=new Date(iso);
   const sameDay=d.getHours()<10;
@@ -797,6 +808,9 @@ function applyState(o,st,who,silent){
 }
 seedData();
 /* ============ Conexión a la base de datos central (Supabase) ============ */
+const GA_ID=""; /* pega aquí el ID de Google Analytics (G-XXXXXXX) para activar la medición */
+if(GA_ID){const g=document.createElement("script");g.async=true;g.src="https://www.googletagmanager.com/gtag/js?id="+GA_ID;document.head.appendChild(g);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",GA_ID);}
+function track(ev,p){try{if(window.gtag)gtag("event",ev,p||{});}catch(_){}}
 const SB_URL="https://mluvrdqusnbkqsoeuexc.supabase.co";
 const SB_KEY="sb_publishable_geoLSQB5FU1mE7ZfTiKOhQ_EYFHzydo"; // clave publicable: segura en el navegador (RLS activo)
 let SB_SESSION=null; // {access_token,refresh_token}
@@ -934,7 +948,8 @@ async function notifyNewOrder(o){
     fd.append("_subject",`Nuevo pedido ${o.number} — ${c.name||"cliente"} — ${money(t.total)}`);
     fd.append("_template","table");
     fd.append("_captcha","false");
-    if(c.email) fd.append("_replyto",c.email);
+    if(c.email){ fd.append("_replyto",c.email); fd.append("email",c.email);
+      fd.append("_autoresponse",`Hola ${c.contact||c.name||""}, recibimos tu pedido ${o.number} en Cultivos San Isidro por ${money(t.total)}. ${o.payMode==="credito"?"Está pendiente de aprobación de crédito.":"Verificaremos el pago y te avisaremos cuando salga el despacho."} Cualquier duda: WhatsApp +57 311 367 6027. Gracias por preferirnos.`); }
     fd.append("Pedido",o.number);
     fd.append("Registrado en el sistema",o.pendingSync?"NO — falló el registro; el cliente debe enviarlo por WhatsApp":"Sí");
     fd.append("Cliente",c.name||"");
@@ -1033,7 +1048,7 @@ function viewHome(){
           <a class="btn btn-primary btn-lg" href="#/pedir">Hacer pedido</a>
           <a class="btn btn-ghost btn-lg" href="#/como-funciona">Cómo funciona</a>
         </div>
-        <p style="margin-top:16px;font-size:12.5px;color:var(--gold);letter-spacing:.06em">Pedidos antes de las 10:00 a. m. se despachan el mismo día · Tallos desde $1.000</p>
+        <p style="margin-top:16px;font-size:12.5px;color:var(--gold);letter-spacing:.06em">${despachoHint()} · Tallos desde $1.000</p>
       </div>
       <div class="hero-visual lamina" style="padding:12px;background:var(--paper);border:1px solid var(--line);box-shadow:none"><div style="border:1px solid var(--line);overflow:hidden;height:100%">
         <video autoplay muted loop playsinline preload="metadata" poster="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/home/img-01.jpg" style="width:100%;height:100%;object-fit:cover;display:block" aria-label="Video del cultivo San Isidro: campo, cosecha y sala de empaque"><source src="/san-isidro-video.mp4" type="video/mp4"><source src="/san-isidro-video.webm" type="video/webm"></video>
@@ -1145,7 +1160,7 @@ function colorCard(c){
       ${agotado?'<span class="avail agotado">Agotado temporalmente</span>':""}
       ${ph?"":'<span class="ph-tag">Foto pendiente</span>'}
     </div>
-    <div class="info"><b>${esc(c.name)}</b><small>Código: ${c.code}</small><span class="sel">${agotado?"No disponible":"Seleccionar →"}</span></div>
+    <div class="info"><b>${esc(c.name)}</b><small>Código: ${c.code}</small><span class="pf">Desde ${money(Math.min(...Object.values(c.prices||{}).filter(Number)))} / tallo</span><span class="sel">${agotado?"No disponible":"Seleccionar →"}</span></div>
   </button>`;
 }
 
@@ -1290,7 +1305,7 @@ function viewCart(){
   </div>
   <div class="card card-pad" style="margin-top:14px;max-width:460px;margin-left:auto">
     <div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0"><span>Subtotal flores</span><b>${money(t.sub)}</b></div>
-    ${t.recargo?`<div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0;color:var(--warn)"><span>Recargo cajas con menos de 20 tallos</span><b>${money(t.recargo)}</b></div>`:""}
+    ${t.recargo?`<div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0;color:var(--warn)"><span>Recargo cajas con menos de 20 tallos</span><b>${money(t.recargo)}</b></div><div style="font-size:12.5px;color:var(--forest);padding:2px 0 6px">Consejo: ${DB.session.cart.filter(i=>i.qty<20).map(i=>{const c=colorById(i.colorId);return `${c?c.name:i.colorId} (+${20-i.qty} tallos)`;}).join(", ")} → al llegar a 20 tallos por caja te ahorras ${money(RECARGO_CAJA_PEQ)} por cada una.</div>`:""}
     <div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0"><span>Cargo por caja (${t.lines} caja${t.lines!==1?"s":""} × ${money(CAJA_CHARGE)})</span><b>${money(t.caja)}</b></div>
     ${t.conserv?`<div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0"><span>Conservante/Comida (${t.comidaUnits} × ${money(CONSERVANTE)})</span><b>${money(t.conserv)}</b></div>`:""}
     <div style="display:flex;justify-content:space-between;font-size:17px;padding-top:8px;border-top:1.5px solid var(--line);color:var(--forest)"><span><b>Total</b></span><b>${money(t.total)}</b></div>
@@ -1332,7 +1347,7 @@ function viewDatos(){
   <fieldset class="fs"><legend>Datos del cliente</legend>
     <div class="form-grid">
       ${fld("c_name","Nombre / Razón social",1,{value:c.name})}
-      ${fld("c_contact","Nombre del contacto",1,{value:c.contact})}
+      ${fld("c_contact","Nombre del contacto",0,{value:c.contact})}
       ${fld("c_phone","Teléfono",1,{type:"tel",value:c.phone})}
       ${fld("c_wa","WhatsApp",0,{type:"tel",value:c.wa||c.phone})}
       ${fld("c_email","Correo electrónico",1,{type:"email",value:c.email})}
@@ -1348,8 +1363,8 @@ function viewDatos(){
       ${fld("s_dept","Departamento",1,{value:sh.dept})}
       ${fld("s_addr","Dirección",1,{value:sh.address,full:1})}
       ${fld("s_barrio","Barrio",0,{value:sh.barrio})}
-      ${fld("s_recv","Nombre de quien recibe",1,{value:sh.receiver})}
-      ${fld("s_rphone","Teléfono de quien recibe",1,{type:"tel",value:sh.receiverPhone})}
+      ${fld("s_recv","Nombre de quien recibe",0,{value:sh.receiver})}
+      ${fld("s_rphone","Teléfono de quien recibe",0,{type:"tel",value:sh.receiverPhone})}
       ${fld("s_notes","Observaciones",0,{type:"textarea",value:sh.notes,full:1})}
     </div>
   </fieldset>
@@ -1359,15 +1374,15 @@ function viewDatos(){
       <label class="radio-card ${b.kind==="Persona natural"?"on":""}"><input type="radio" name="bkind" value="Persona natural" ${b.kind==="Persona natural"?"checked":""}> Persona natural</label>
       <label class="radio-card ${b.kind!=="Persona natural"?"on":""}"><input type="radio" name="bkind" value="Empresa" ${b.kind!=="Persona natural"?"checked":""}> Empresa</label>
     </div>
-    <label class="radio-card" style="margin-bottom:16px;border-style:dashed"><input type="checkbox" id="copyBilling"> Usar los mismos datos del cliente</label>
+    <label class="radio-card on" style="margin-bottom:16px;border-style:dashed"><input type="checkbox" id="copyBilling" checked> Usar los mismos datos del cliente (si dejas estos campos vacíos, usamos los datos de arriba)</label>
     <div class="form-grid">
-      ${fld("b_name","Nombre / Razón social",1,{value:b.name})}
-      ${fld("b_doctype","Tipo de documento",1,{type:"select",options:["NIT","Cédula de ciudadanía","Cédula de extranjería"],value:b.doctype})}
-      ${fld("b_doc","NIT / documento",1,{value:b.doc})}
-      ${fld("b_email","Correo de facturación",1,{type:"email",value:b.email})}
-      ${fld("b_addr","Dirección",1,{value:b.address})}
-      ${fld("b_city","Ciudad",1,{value:b.city})}
-      ${fld("b_dept","Departamento",1,{value:b.dept})}
+      ${fld("b_name","Nombre / Razón social",0,{value:b.name})}
+      ${fld("b_doctype","Tipo de documento",0,{type:"select",options:["NIT","Cédula de ciudadanía","Cédula de extranjería"],value:b.doctype})}
+      ${fld("b_doc","NIT / documento",0,{value:b.doc})}
+      ${fld("b_email","Correo de facturación",0,{type:"email",value:b.email})}
+      ${fld("b_addr","Dirección",0,{value:b.address})}
+      ${fld("b_city","Ciudad",0,{value:b.city})}
+      ${fld("b_dept","Departamento",0,{value:b.dept})}
     </div>
   </fieldset>
   <div class="action-row" style="justify-content:space-between">
@@ -2268,7 +2283,7 @@ document.addEventListener("click",async e=>{
     DB.ui.modal=null;toast("Agregado a tu pedido");render();return;
   }
   if(d.gotoCart!==undefined){DB.ui.checkStep=2;go("/pedir");render();window.scrollTo(0,0);return;}
-  if(d.step!==undefined){DB.ui.checkStep=+d.step;go("/pedir");render();window.scrollTo(0,0);return;}
+  if(d.step!==undefined){DB.ui.checkStep=+d.step;track("checkout_step",{step:+d.step});go("/pedir");render();window.scrollTo(0,0);return;}
   if(d.fam!==undefined){DB.ui.cat=d.fam;DB.ui.group="";render();return;}
   if(d.clearSearch!==undefined){DB.ui.query="";DB.ui.cat="";DB.ui.group="";render();return;}
 
@@ -2545,6 +2560,12 @@ function bindAfterRender(){
     });
     df.addEventListener("submit",e=>{
       e.preventDefault();
+      /* autollenado: menos campos obligatorios para el cliente */
+      const bBlank=!$("#b_doc").value.trim();
+      const fill=(a,b)=>{const ea=$("#"+a),eb=$("#"+b);if(ea&&eb&&!ea.value.trim())ea.value=eb.value;};
+      if(bBlank)$("#b_doctype").value=$("#c_doctype").value;
+      fill("c_contact","c_name");fill("s_recv","c_contact");fill("s_rphone","c_phone");
+      fill("b_name","c_name");fill("b_doc","c_doc");fill("b_email","c_email");fill("b_addr","s_addr");fill("b_city","s_city");fill("b_dept","s_dept");
       let ok=true;
       df.querySelectorAll("[required]").forEach(inp=>{
         const f=inp.closest(".field");const bad=!inp.value.trim();
@@ -2633,6 +2654,7 @@ async function submitOrder(){
     o.pendingSync=true; /* sin internet o servicio caído: el respaldo es WhatsApp */
   }
   notifyNewOrder(o); /* aviso por correo a ventas@ (no bloquea la confirmación) */
+  track("purchase",{transaction_id:o.number,value:orderTotals(o).total,currency:"COP"});
   DB.ui.lastOrder=o;
   s.cart=[];s.receipt=null;s.payMode=null;
   DB.ui.checkStep=5;
