@@ -50,7 +50,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Poppins:wght@200;300;400;500&family=Monsieur+La+Doulaise&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Poppins:wght@200;300;400;500&family=Monsieur+La+Doulaise&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    CULTIVO SAN ISIDRO — Sistema de pedidos de flor nacional
@@ -515,6 +515,39 @@ footer.site{background:var(--forest-deep)}
 }
 @media (min-width:961px) and (max-width:1400px){ nav.main a{font-size:12.5px;padding:8px 8px} .brand-word{font-size:20px} }
 @media (min-width:961px) and (max-width:1200px){ nav.main a[data-nav="/admin"]{display:none} nav.main a[href="/"]{display:none} }
+
+/* ===== Tema v2: titulares sin cursiva, recuadros y bandas beige ===== */
+:root{ --beige:#F3EFE6; --beige-deep:#E9E3D5; --display:"Plus Jakarta Sans","Manrope",system-ui,sans-serif; }
+h1,h2,h3,h4,.serif,.brand-word,.claim b,.order-no{font-family:var(--display)!important;font-weight:700;letter-spacing:-.02em}
+.hero h1{font-weight:800}
+.script{font-family:var(--sans)!important;font-size:16px!important;line-height:1.5!important;color:var(--ink-soft)!important;font-weight:500;letter-spacing:0}
+.sec-h .script{margin-top:6px}
+.brand-word{letter-spacing:.04em}
+.claims{grid-column:1/-1;gap:12px;background:transparent;border:none;max-width:none;margin:8px 0 0;padding:0;grid-template-columns:repeat(4,1fr)}
+.claim{background:var(--beige);border-radius:var(--radius);padding:26px 16px}
+.claim b{font-size:32px}
+.claim span{color:var(--ink-soft);text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;margin-top:4px}
+#app>section.section:nth-of-type(even):not(.wrap){background:var(--beige)}
+#app>section.section.wrap:nth-of-type(even){background:var(--beige);border-radius:var(--radius-lg);padding:64px 40px;margin-left:auto;margin-right:auto;max-width:1180px}
+#app>section.section.wrap:nth-of-type(even) .card{background:#FFFFFF}
+.section{padding:72px 0}
+.kpi{border-radius:var(--radius);border:none;background:var(--beige)}
+.card{box-shadow:var(--shadow)}
+.steps{background:var(--beige)}
+.step.current{background:var(--forest)}
+.chip{background:#FFFFFF}
+.search-box input{background:#FFFFFF}
+.hero{background:#FFFFFF}
+#app>section.section.wrap:nth-of-type(even){margin-top:10px}
+.hero .eyebrow{display:inline-block;background:var(--beige);color:var(--forest);padding:7px 12px;border-radius:999px;letter-spacing:.08em}
+.eyebrow{letter-spacing:.1em}
+.color-card{background:#FFFFFF}
+.cart-bar{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.trust-pay,.note{border-radius:var(--radius)}
+.confirm-hero{background:var(--beige);border-radius:var(--radius-lg);padding:40px 20px}
+.okmark{background:var(--forest);color:#fff;border-radius:999px}
+footer.site{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+@media (max-width:760px){ #app>section.section.wrap:nth-of-type(even){padding:44px 18px;border-radius:var(--radius)} .claims{grid-template-columns:repeat(2,1fr)} }
 /* Encabezado: evitar que el menu se salga de la pantalla en portatiles */
 @media (min-width:961px){
   .site-inner{max-width:1400px}
