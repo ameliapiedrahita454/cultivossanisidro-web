@@ -49,7 +49,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Poppins:wght@200;300;400;500&family=Monsieur+La+Doulaise&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Poppins:wght@200;300;400;500&family=Monsieur+La+Doulaise&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    CULTIVO SAN ISIDRO — Sistema de pedidos de flor nacional
@@ -442,6 +442,111 @@ footer a:hover{color:#fff}
 .faq details[open] summary::after{content:"−"}
 .faq p{margin-top:10px;color:var(--ink-soft);font-size:14.5px;line-height:1.7;max-width:68ch}
 .trust-pay{border-left:2px solid var(--forest);background:var(--sage-pale);border-radius:0;padding:14px 18px;font-size:13.5px;color:var(--forest);line-height:1.6;margin-top:14px}
+/* ===== Tema "Cultivo moderno" (opción B) — azul índigo de marca como color principal, verde bosque como acento ===== */
+:root{
+  --bg:#FFFFFF; --paper:#FFFFFF; --ink:#1B1F33; --ink-soft:#4F5468; --ink-faint:#8A8FA3;
+  --sage-pale:#EEF0F7; --hydr-pale:#EEF0F7; --line:#E3E6EE; --gold:#5A6079;
+  --green:#1F6B4A; --ok:#1F6B4A; --warn:#8A6D2E;
+  --radius:16px; --radius-lg:22px;
+  --shadow:0 1px 2px rgba(27,31,51,.06); --shadow-lg:0 14px 34px rgba(27,31,51,.12);
+  --serif:"Fraunces","Cormorant Garamond",Georgia,serif;
+  --sans:"Manrope","Poppins",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+body{background-image:none;font-weight:400;line-height:1.65}
+.dbl{display:none}
+header.site{background:rgba(255,255,255,.94);box-shadow:none;border-bottom:1px solid var(--line)}
+.brand-word{font-family:var(--serif);font-weight:600;letter-spacing:.08em;font-size:22px;color:var(--forest)}
+.brand-word small{font-family:var(--sans);font-weight:700;color:var(--green);letter-spacing:.3em}
+nav.main a{text-transform:none;letter-spacing:0;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-radius:999px}
+nav.main a:hover{background:var(--sage-pale);color:var(--forest)}
+nav.main a.active{color:var(--forest);border-bottom:none;background:var(--sage-pale)}
+.btn{border-radius:999px;text-transform:none;letter-spacing:0;font-size:14px;font-weight:700;padding:13px 24px}
+.btn-lg{padding:15px 30px;font-size:15px;letter-spacing:0}
+.btn-primary{background:var(--forest);color:#FFFFFF}
+.btn-primary:hover{background:var(--forest-deep)}
+.btn-ghost,.btn-soft{background:#FFFFFF;color:var(--forest);border:1.5px solid var(--forest)}
+.btn-ghost:hover,.btn-soft:hover{background:var(--sage-pale)}
+.eyebrow{color:var(--green);letter-spacing:.14em;font-weight:700;font-size:11px}
+h2{letter-spacing:-.01em}
+.lead{font-weight:400;line-height:1.7}
+.hero{background:#FFFFFF;border-bottom:none}
+.hero .script{display:none}
+.hero h1{font-size:clamp(34px,4.6vw,54px);letter-spacing:-.015em;line-height:1.05;margin:10px 0 16px}
+.hero-visual.lamina{border:none!important;padding:0!important;background:transparent!important}
+.hero-visual.lamina>div:first-child{border:none!important;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
+.hero-visual.lamina>div:last-child{display:none}
+.claims{border-radius:var(--radius-lg);overflow:hidden}
+.claim b{color:var(--forest)}
+.card,.radio-card,.note,.steps{border-radius:var(--radius)}
+.field input,.field select,.field textarea,.search-box input{border-radius:12px}
+.field label{color:var(--ink-soft);text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600}
+.field input:focus,.field select:focus,.field textarea:focus,.search-box input:focus{outline:2px solid var(--forest);outline-offset:1px;border-color:var(--forest)}
+.chip{border-radius:999px;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;padding:9px 16px;border-color:var(--line);color:var(--ink-soft)}
+.chip.on{background:var(--forest);border-color:var(--forest);color:#FFFFFF}
+.steps{border-radius:999px;background:var(--sage-pale);border:none;padding:4px}
+.step{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;border-radius:999px}
+.step.current{background:var(--forest);color:#FFFFFF}
+.step.current .n{background:#FFFFFF;color:var(--forest);border-color:#FFFFFF}
+.step .n{border-radius:999px;font-family:var(--sans);font-weight:700}
+.step.done{color:var(--green)} .step.done .n{border-color:var(--green);color:var(--green)}
+.color-card{border-radius:var(--radius);padding:0;border:1px solid var(--line);box-shadow:var(--shadow);text-align:left}
+.color-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:transparent}
+.color-card .swatch{border:none;aspect-ratio:4/3;background:#F3F4F8}
+.color-card .info{padding:12px 14px 14px;align-items:flex-start}
+.color-card .info b{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--ink);text-align:left}
+.color-card .info small{color:var(--ink-faint);letter-spacing:.04em;text-transform:none;font-size:11.5px;margin-top:0}
+.color-card .pf{color:var(--green);font-size:14px;margin-top:4px}
+.color-card .sel{background:#E7F2EC;color:var(--green);border:none;border-radius:999px;padding:9px 12px;text-align:center;text-transform:none;letter-spacing:0;font-weight:700;font-size:12.5px;margin-top:10px}
+.color-card.is-agotado .sel{background:#F1F2F5;color:var(--ink-faint)}
+.badge{border-radius:999px;text-transform:none;letter-spacing:0;font-size:11px;font-weight:700;padding:5px 11px}
+.lamina,.lam{border:none;padding:0;background:transparent}
+.lamina>div,.lam>div{border-radius:var(--radius);overflow:hidden}
+.cp{text-transform:none;letter-spacing:0;font-size:12px;color:var(--ink-faint)}
+.note{border-left:3px solid var(--green);color:var(--ink-soft);background:#F7F9F7;border-top:none;border-right:none;border-bottom:none}
+.trust-pay{border-left:3px solid var(--forest);background:var(--sage-pale);border-radius:var(--radius)}
+.cart-bar{background:var(--forest-deep)}
+footer.site{background:var(--forest-deep)}
+.tbl td{border-color:var(--line)}
+.wa-fab{border-radius:999px;background:#1F6B4A;border:none;text-transform:none;letter-spacing:0;font-size:13px;font-weight:700;padding:13px 20px}
+@media (min-width:961px){
+  nav.main a{font-size:13px;padding:8px 10px}
+  .site-inner .btn-primary{padding:11px 18px;font-size:13.5px;white-space:nowrap}
+}
+@media (min-width:961px) and (max-width:1400px){ nav.main a{font-size:12.5px;padding:8px 8px} .brand-word{font-size:20px} }
+@media (min-width:961px) and (max-width:1200px){ nav.main a[data-nav="/admin"]{display:none} nav.main a[href="/"]{display:none} }
+
+/* ===== Tema v2: titulares sin cursiva, recuadros y bandas beige ===== */
+:root{ --beige:#F3EFE6; --beige-deep:#E9E3D5; --display:"Plus Jakarta Sans","Manrope",system-ui,sans-serif; }
+h1,h2,h3,h4,.serif,.brand-word,.claim b,.order-no{font-family:var(--display)!important;font-weight:700;letter-spacing:-.02em}
+.hero h1{font-weight:800}
+.script{font-family:var(--sans)!important;font-size:16px!important;line-height:1.5!important;color:var(--ink-soft)!important;font-weight:500;letter-spacing:0}
+.sec-h .script{margin-top:6px}
+.brand-word{letter-spacing:.04em}
+.claims{grid-column:1/-1;gap:12px;background:transparent;border:none;max-width:none;margin:8px 0 0;padding:0;grid-template-columns:repeat(4,1fr)}
+.claim{background:var(--beige);border-radius:var(--radius);padding:26px 16px}
+.claim b{font-size:32px}
+.claim span{color:var(--ink-soft);text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;margin-top:4px}
+#app>section.section:nth-of-type(even):not(.wrap){background:var(--beige)}
+#app>section.section.wrap:nth-of-type(even){background:var(--beige);border-radius:var(--radius-lg);padding:64px 40px;margin-left:auto;margin-right:auto;max-width:1180px}
+#app>section.section.wrap:nth-of-type(even) .card{background:#FFFFFF}
+.section{padding:72px 0}
+.kpi{border-radius:var(--radius);border:none;background:var(--beige)}
+.card{box-shadow:var(--shadow)}
+.steps{background:var(--beige)}
+.step.current{background:var(--forest)}
+.chip{background:#FFFFFF}
+.search-box input{background:#FFFFFF}
+.hero{background:#FFFFFF}
+#app>section.section.wrap:nth-of-type(even){margin-top:10px}
+.hero .eyebrow{display:inline-block;background:var(--beige);color:var(--forest);padding:7px 12px;border-radius:999px;letter-spacing:.08em}
+.eyebrow{letter-spacing:.1em}
+.color-card{background:#FFFFFF}
+.cart-bar{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.trust-pay,.note{border-radius:var(--radius)}
+.confirm-hero{background:var(--beige);border-radius:var(--radius-lg);padding:40px 20px}
+.okmark{background:var(--forest);color:#fff;border-radius:999px}
+footer.site{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+@media (max-width:760px){ #app>section.section.wrap:nth-of-type(even){padding:44px 18px;border-radius:var(--radius)} .claims{grid-template-columns:repeat(2,1fr)} }
 /* Encabezado: evitar que el menu se salga de la pantalla en portatiles */
 @media (min-width:961px){
   .site-inner{max-width:1400px}
@@ -1039,13 +1144,12 @@ function viewHome(){
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="eyebrow">Fundado en La Ceja, Antioquia · Anno MCMXCVII</div>
-        <h1>Hortensia blanca</h1>
+        <div class="eyebrow">Directo del cultivo · La Ceja, Antioquia · desde 1997</div>
+        <h1>255 colores de hortensia, directo del cultivo</h1>
         <div class="script" aria-hidden="true" style="margin:2px 0 6px">de nuestro cultivo</div>
-        <p style="font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-soft);letter-spacing:.05em;margin-bottom:16px">Floristerías, eventos y mayoristas de toda Colombia piden aquí</p>
-        <p class="sub">Pide directamente al cultivo: elige el color, la calidad y la cantidad de tallos. Nosotros nos encargamos del resto.</p>
+        <p class="sub">Para floristerías, eventos y mayoristas de toda Colombia. Precio por tallo visible, pedido mínimo 10 tallos por color, pago por transferencia o crédito para clientes frecuentes. Despachamos con Coordinadora a todo el país.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <a class="btn btn-primary btn-lg" href="#/pedir">Hacer pedido</a>
+          <a class="btn btn-primary btn-lg" href="#/pedir">Ver colores y pedir</a>
           <a class="btn btn-ghost btn-lg" href="#/como-funciona">Cómo funciona</a>
         </div>
         <p style="margin-top:16px;font-size:12.5px;color:var(--gold);letter-spacing:.06em">${despachoHint()} · Tallos desde $1.000</p>
