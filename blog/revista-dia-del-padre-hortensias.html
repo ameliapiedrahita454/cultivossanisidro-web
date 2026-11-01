@@ -159,6 +159,11 @@ table.tb{width:100%;border-collapse:collapse;margin:0 0 24px;font-size:14px;bord
 <style>
 .lam img{max-height:520px;object-fit:cover}
 .lead{font-size:18px!important;color:var(--ink)!important;line-height:1.75!important}
+.cover-row{display:grid;grid-template-columns:1fr 320px;gap:30px;align-items:center;margin:6px 0 26px}
+.cover-row .lead{margin:0!important}
+.cover{margin:0;border-radius:var(--radius-lg);overflow:hidden;background:var(--beige);box-shadow:var(--shadow)}
+.cover img{width:100%;height:auto;aspect-ratio:440/348;object-fit:cover;display:block}
+.cover figcaption{padding:10px 14px;font-size:12.5px;color:var(--ink-soft);font-weight:600}
 .mag-dates{background:var(--beige);border-radius:var(--radius-lg);padding:22px 24px;margin:30px 0}
 .mag-dates h2{margin:0 0 12px!important;font-size:21px!important}
 .mag-dates ul{list-style:none;margin:0 0 14px!important;padding:0}
@@ -185,7 +190,7 @@ a.sw:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 .mini-cards small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin:10px 12px 2px}
 .mini-cards b{display:block;font-family:var(--display);font-size:15.5px;color:var(--forest);margin:0 12px 12px;line-height:1.3}
 .mag-intro{max-width:760px;margin:0 auto 10px;text-align:center;color:var(--ink-soft);font-size:16px;line-height:1.75}
-@media(max-width:700px){.pal{grid-template-columns:repeat(2,1fr)}.look-meta{grid-template-columns:1fr}.mini-cards{grid-template-columns:1fr 1fr}.mag-dates li{grid-template-columns:1fr;gap:2px}}
+@media(max-width:700px){.cover-row{grid-template-columns:1fr;gap:18px}.cover{max-width:360px;margin:0 auto}.pal{grid-template-columns:repeat(2,1fr)}.look-meta{grid-template-columns:1fr}.mini-cards{grid-template-columns:1fr 1fr}.mag-dates li{grid-template-columns:1fr;gap:2px}}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
@@ -207,8 +212,8 @@ a.sw:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 <div class="script">flores para papá, sin clichés</div>
 <p class="meta">Cultivo San Isidro · La Ceja, Antioquia · Edición 2026–2027</p></div>
 <article>
-<p class="lead">Cada vez más personas regalan flores el Día del Padre, y la hortensia es perfecta porque se aleja de lo romántico: en azules y verdes se ve sobria, moderna y masculina sin dejar de ser un regalo. Es una oportunidad de venta que muchas floristerías todavía no aprovechan.</p>
-<div class="lam"><div><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/ms5.jpg" alt="Hortensia Moss Blue en azul y blanco"></div><div class="cp">En portada: Moss Blue · MS5</div></div>
+<div class="cover-row"><p class="lead">Cada vez más personas regalan flores el Día del Padre, y la hortensia es perfecta porque se aleja de lo romántico: en azules y verdes se ve sobria, moderna y masculina sin dejar de ser un regalo. Es una oportunidad de venta que muchas floristerías todavía no aprovechan.</p>
+<figure class="cover"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/ms5.jpg" alt="Hortensia Moss Blue en azul y blanco" width="440" height="348"><figcaption>En portada: Moss Blue · MS5</figcaption></figure></div>
 <div class="mag-dates"><h2>Fechas clave</h2><ul><li><b>20 de junio de 2027</b><span>Tercer domingo de junio: Día del Padre en Colombia.</span></li></ul><p>Planea recibir la flor el jueves 17 o el viernes 18 de junio. Si vendes cajas con licor o chocolates, cierra pedidos con tus clientes desde la semana anterior.</p></div>
 <section class="look"><div class="look-n">PALETA 01</div>
 <h2>Azules</h2>
@@ -236,7 +241,7 @@ a.sw:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 <a class="btn" href="/pedidos/#/pedir">Ver catálogo y pedir</a>
 <a class="btn ghost" href="https://wa.me/573113676027?text=Hola%20San%20Isidro%2C%20quiero%20pedir%20la%20paleta%20de%20D%C3%ADa%20del%20Padre%3A%20T.%20Royal%20Blue%2C%20T.%20Winter%20Blue%2C%20Eclipse%20Blue%2C%20Metallic%20Blue%2C%20T.%20Olive%20Green%2C%20T.%20Moss%20Green%2C%20Antique%20Green%2C%20Sky%20Green%2C%20Antique%20Dark%20Blue%2C%20T.%20Aqua%2C%20T.%20Silver%20light">Pedir por WhatsApp</a></div>
 <h2>Más ediciones de la revista</h2>
-<div class="mini-cards"><a href="/blog/revista-navidad-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/r3.jpg" alt="Hortensia Rainbow Christmas en rojo, blanco y verde" loading="lazy"><small>Diciembre</small><b>Navidad y Año Nuevo</b></a><a href="/blog/revista-san-valentin-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/b4.jpg" alt="Hortensia Bicolor Cherry en rosa y rojo" loading="lazy"><small>Febrero</small><b>San Valentín</b></a><a href="/blog/revista-dia-de-la-mujer-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/an5.jpg" alt="Hortensia Antique Lilac en lila y blanco" loading="lazy"><small>Marzo</small><b>Día de la Mujer</b></a><a href="/blog/revista-dia-de-la-madre-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/c3.jpg" alt="Hortensia California Rose en tonos durazno y rosa" loading="lazy"><small>Mayo</small><b>Día de la Madre</b></a><a href="/blog/revista-amor-y-amistad-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/b2.jpg" alt="Hortensia Bicolor Sunshine en amarillo y naranja" loading="lazy"><small>Septiembre</small><b>Amor y Amistad</b></a><a href="/blog/revista-halloween-otono-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/ti3.jpg" alt="Hortensia Tie Dye Fall en tonos de otoño" loading="lazy"><small>Octubre</small><b>Halloween y otoño</b></a></div>
+<div class="mini-cards"><a href="/blog/revista-navidad-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/r3.jpg" alt="Hortensia Rainbow Christmas en rojo, blanco y verde" loading="lazy"><small>Diciembre</small><b>Navidad y Año Nuevo</b></a><a href="/blog/revista-san-valentin-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/b4.jpg" alt="Hortensia Bicolor Cherry en rosa y rojo" loading="lazy"><small>Febrero</small><b>San Valentín</b></a><a href="/blog/revista-dia-de-la-mujer-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/an5.jpg" alt="Hortensia Antique Lilac en lila y blanco" loading="lazy"><small>Marzo</small><b>Día de la Mujer</b></a><a href="/blog/revista-dia-de-la-madre-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/c3.jpg" alt="Hortensia California Rose en tonos durazno y rosa" loading="lazy"><small>Mayo</small><b>Día de la Madre</b></a><a href="/blog/revista-amor-y-amistad-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/ec6.jpg" alt="Hortensia Eclipse Magenta en rosa y rojo intenso" loading="lazy"><small>Septiembre</small><b>Amor y Amistad</b></a><a href="/blog/revista-halloween-otono-hortensias"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/colores/ti3.jpg" alt="Hortensia Tie Dye Fall en tonos de otoño" loading="lazy"><small>Octubre</small><b>Halloween y otoño</b></a></div>
 <p style="text-align:center"><a href="/blog/revista-de-temporadas"><b>Ver la revista completa →</b></a></p>
 </article></div>
 <footer class="site"><div class="wrap">
