@@ -1254,7 +1254,7 @@ function render(){queueMicrotask(saveDB);queueMicrotask(sbPushDirty);
   $("#mainNav").classList.remove("open");
   const app=$("#app");
   if(r==="/") app.innerHTML=viewHome();
-  else if(r.startsWith("/pedir")) app.innerHTML=viewPedir();
+  else if(r.startsWith("/pedir")){const qi=r.indexOf("?");if(qi>-1){const qp=new URLSearchParams(r.slice(qi+1));if(qp.has("buscar")){DB.ui.query=qp.get("buscar")||"";DB.ui.cat="";DB.ui.group="";DB.ui.checkStep=1;try{history.replaceState(null,"","#/pedir")}catch(_){}}}app.innerHTML=viewPedir();}
   else if(r==="/como-funciona") app.innerHTML=viewComo();
   else if(r==="/tiempos") app.innerHTML=viewTiempos();
   else if(r==="/contacto") app.innerHTML=viewContacto();
