@@ -886,7 +886,7 @@ function isCreditClient(name){
 const AUTH_SALT="sanisidro-2026";
 const USERS={"lorenza": {"name": "Lorenza Piedrahita", "role": "admin", "h": "f561c589add698a472c0876eeacd234c9817e4ead1956f5fe9c76aafc5a77843"}, "amelia": {"name": "Amelia Piedrahita", "role": "admin", "h": "c12042b1026e5782821faaf313de7f2b12aacf31a2236eacb8aebd2a3f0230e0"}, "sandra": {"name": "Sandra Ríos", "role": "ventas", "h": "4dbae11f5ba60deb3db8eab8305ccb0308ba0b872151cca81329cffe9b68e3f4"}, "facturacion": {"name": "Facturación", "role": "fact", "h": "19709ca18349ecd32b1f5555f0bf14bf258233c35d403c6deb7359e4ebbb03e3"}, "sala": {"name": "Sala de preparación", "role": "sala", "h": "20bfcf06bb6d97d4c59b9a9c3a2c66dc0d1db83974e8095b04dbfd9ec489a7d9"}, "despacho": {"name": "Despacho", "role": "desp", "h": "94e67cdef0240a40173ea08ac0ebdcb1527afa007141253141fd54b62bf2a3b6"}};
 /* Todos los usuarios ven todas las secciones del panel. */
-const ALL_SECTIONS=["dash","mes","pedidos","fact","sala","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
+const ALL_SECTIONS=["dash","mes","pedidos","pend","fact","sala","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
 const ROLES = {
   admin:{name:"Administrador",sections:ALL_SECTIONS},
   ventas:{name:"Ventas",sections:ALL_SECTIONS},
@@ -1164,7 +1164,7 @@ function sbPushDirty(){
   if(!SB_SESSION) return;
   DB.orders.filter(o=>o._dirty&&o.remoteId).forEach(o=>{sbSaveOrder(o).catch(()=>{});});
 }
-setInterval(()=>{if(DB.admin.user){sbFetchOrders(true).catch(()=>{});
+setInterval(()=>{if(DB.admin.user){sbFetchOrders(true).catch(()=>{});sbFetchLeads().catch(()=>{});
   /* Los reclamos cambian poco — se refrescan en segundo plano sin interrumpir si hay un formulario abierto */
   if(DB.ui.reclamoForm!=="new")sbFetchReclamos().then(()=>{if(DB.admin.section==="reclamos"&&DB.ui.reclamoForm!=="new")render();}).catch(()=>{});
   sbPushDirty();}},45000);
@@ -1630,6 +1630,7 @@ function viewDatos(){
       ${fld("b_dept","Departamento",0,{value:b.dept})}
     </div>
   </fieldset>
+  <p class="fs-sub" style="margin:4px 0 0">Al continuar autorizas a Cultivo San Isidro a usar estos datos para gestionar tu pedido y contactarte sobre él (Ley 1581 de 2012).</p>
   <div class="action-row" style="justify-content:space-between">
     <button type="button" class="btn btn-ghost" data-step="2">← Volver al pedido</button>
     <button type="submit" class="btn btn-primary btn-lg">Continuar al pago →</button>
@@ -1859,7 +1860,7 @@ function viewRapido(){
 /* ============================================================
    PANEL ADMINISTRATIVO
    ============================================================ */
-const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["fact","Facturación","🧾"],["sala","Sala","🌿"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
+const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["sala","Sala","🌿"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
 function viewAdmin(){
   if(!DB.admin.user) return viewLogin();
   const role=ROLES[DB.admin.role];
@@ -1867,12 +1868,13 @@ function viewAdmin(){
   if(!role.sections.includes(sec)) sec=role.sections[0], DB.admin.section=sec;
   const counts={
     pedidos:DB.orders.filter(o=>o.state==="Pago por verificar").length,
+    pend:(DB.leads||[]).filter(l=>l.estado==="pendiente").length,
     fact:DB.orders.filter(o=>o.state==="Pendiente de facturación").length,
     sala:DB.orders.filter(o=>o.state==="En preparación").length,
     desp:DB.orders.filter(o=>["Listo para despacho","Despachado","En tránsito"].includes(o.state)).length,
     reclamos:DB.reclamos.filter(r=>r.estado==="Pendiente").length
   };
-  const body={dash:adDash,mes:adMes,pedidos:adPedidos,fact:adFact,sala:adSala,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb}[sec]();
+  const body={dash:adDash,mes:adMes,pedidos:adPedidos,fact:adFact,sala:adSala,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
   return `<div class="admin-shell">
     <aside class="admin-side">
       <div class="who"><b>${esc(DB.admin.user)}</b><small>${role.name}</small></div>
@@ -2263,6 +2265,54 @@ async function loadWebStats(dias){
     <p style="color:var(--ink-soft);font-size:13.5px;margin:6px 0 14px">Cuántas visitas avanzan en cada paso. El mayor salto entre dos pasos es donde más clientes se pierden.</p>
     <div class="hbars embudo">${steps.map(s=>`<div class="hbar"><span class="lbl" title="${s[0]}">${s[0]}</span><div class="track"><div class="fill" style="width:${ses?Math.min(100,(s[1]||0)/ses*100):0}%"></div></div><span class="val">${n(s[1])} · ${pct(s[1]||0)}</span></div>`).join("")}</div>
   </div>`;
+}
+
+/* ---------- Pedidos sin terminar (recuperación por WhatsApp) ---------- */
+function leadId(){try{let x=sessionStorage.getItem("si_lead");if(!x){x=crypto.randomUUID();sessionStorage.setItem("si_lead",x);}return x;}catch(_){return null;}}
+function saveLead(paso){try{const s=DB.session,id=leadId();if(!id||!s.customer||!s.cart.length)return;const t=cartTotals();
+  const items=s.cart.map(i=>{const c=colorById(i.colorId);return {n:c?c.name:i.colorId,c:c?c.code:"",s:i.size,q:i.qty};});
+  fetch(SB_URL+"/rest/v1/rpc/guardar_pedido_sin_terminar",{method:"POST",keepalive:true,headers:sbHeaders(false),body:JSON.stringify({p_id:id,p_paso:paso,p:{nombre:s.customer.name,contacto:s.customer.contact,telefono:s.customer.phone,whatsapp:s.customer.wa,correo:s.customer.email,ciudad:s.shipping?s.shipping.city:"",tipo_cliente:s.customer.type,items,total:t.total}})}).catch(()=>{});}catch(_){}}
+function completeLead(){try{const id=sessionStorage.getItem("si_lead");if(!id)return;fetch(SB_URL+"/rest/v1/rpc/completar_pedido_sin_terminar",{method:"POST",keepalive:true,headers:sbHeaders(false),body:JSON.stringify({p_id:id})}).catch(()=>{});sessionStorage.removeItem("si_lead");}catch(_){}}
+async function sbFetchLeads(){
+  if(!(await sbEnsure())) return;
+  const r=await fetch(SB_URL+"/rest/v1/pedidos_sin_terminar?select=*&estado=in.(pendiente,contactado)&order=actualizado.desc&limit=100",{headers:sbHeaders(true)});
+  if(!r.ok) return;
+  DB.leads=await r.json(); DB.leadsLoaded=true;
+}
+async function leadSet(id,estado){
+  try{
+    if(!(await sbEnsure())) return;
+    await fetch(SB_URL+"/rest/v1/pedidos_sin_terminar?id=eq."+id,{method:"PATCH",headers:{...sbHeaders(true),"Prefer":"return=minimal"},body:JSON.stringify({estado,actualizado:new Date().toISOString()})});
+    await sbFetchLeads(); toast(estado==="contactado"?"Marcado como contactado":"Descartado"); render();
+  }catch(_){toast("No se pudo actualizar",true);}
+}
+function leadWa(l){
+  let p=String(l.whatsapp||l.telefono||"").replace(/\D/g,""); if(p.length===10&&p[0]==="3") p="57"+p;
+  const nom=String(l.contacto||l.nombre||"").split(" ")[0];
+  const its=(l.items||[]); const items=its.slice(0,4).map(i=>`${i.n} ${i.s} × ${i.q}`).join(", ");
+  const msg=`Hola ${nom}, te escribimos de Cultivo San Isidro. Vimos que dejaste un pedido sin terminar en nuestro portal${items?` (${items}${its.length>4?"…":""})`:""}. ¿Te ayudamos a completarlo? Si prefieres, lo tomamos por aquí.`;
+  return "https://wa.me/"+p+"?text="+encodeURIComponent(msg);
+}
+function adPend(){
+  if(!DB.leadsLoaded) setTimeout(()=>sbFetchLeads().then(()=>{if(DB.admin.section==="pend")render();}).catch(()=>{}),0);
+  const L=DB.leads||[];
+  const ago=iso=>{const m=Math.max(0,Math.round((Date.now()-new Date(iso))/60000));return m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`;};
+  return `<h2>Pedidos sin terminar</h2>
+  <p class="admin-sub">Clientes que llenaron sus datos pero no confirmaron el pedido; casi siempre se quedan en el paso de pago. Escríbeles por WhatsApp para ayudarles a terminar.</p>
+  ${!DB.leadsLoaded?`<div class="card card-pad">Cargando…</div>`:!L.length?`<div class="card card-pad">No hay pedidos sin terminar. Cuando un cliente deje un pedido a medias, aparecerá aquí con su teléfono y lo que iba a pedir.</div>`:
+  L.map(l=>`<div class="card card-pad" style="margin-bottom:12px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start">
+      <div><b style="font-size:16px">${esc(l.nombre||"Sin nombre")}</b>${l.contacto&&l.contacto!==l.nombre?` · ${esc(l.contacto)}`:""}
+        <div style="font-size:13px;color:var(--ink-soft);margin-top:4px">${[l.tipo_cliente,l.ciudad,l.telefono,ago(l.actualizado)].filter(Boolean).map(esc).join(" · ")}</div></div>
+      <div style="text-align:right"><b>${money(l.total||0)}</b><div style="font-size:12px;color:var(--ink-faint)">${l.estado==="contactado"?"Contactado":"Pendiente"}</div></div>
+    </div>
+    <div style="font-size:13.5px;color:var(--ink-soft);margin:10px 0">${(l.items||[]).map(i=>`${esc(i.n)} · ${esc(i.s)} × ${+i.q||0}`).join(" — ")}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${(l.whatsapp||l.telefono)?`<a class="btn btn-primary btn-sm" target="_blank" rel="noopener" href="${esc(leadWa(l))}" onclick="leadSet('${esc(l.id)}','contactado')">Escribir por WhatsApp</a>`:""}
+      ${l.correo?`<a class="btn btn-ghost btn-sm" href="mailto:${esc(l.correo)}?subject=${encodeURIComponent("Tu pedido en Cultivo San Isidro")}">Correo</a>`:""}
+      ${l.estado==="pendiente"?`<button type="button" class="btn btn-soft btn-sm" onclick="leadSet('${esc(l.id)}','contactado')">Marcar contactado</button>`:""}
+      <button type="button" class="btn btn-ghost btn-sm" onclick="leadSet('${esc(l.id)}','descartado')">Descartar</button>
+    </div></div>`).join("")}`;
 }
 
 /* ---------- Despacho ---------- */
@@ -2880,6 +2930,7 @@ function bindAfterRender(){
       DB.session.billing={kind:df.querySelector("[name=bkind]:checked").value,name:$("#b_name").value,doctype:$("#b_doctype").value,doc:$("#b_doc").value,email:$("#b_email").value,address:$("#b_addr").value,city:$("#b_city").value,dept:$("#b_dept").value};
       try{localStorage.setItem("si_perfil",JSON.stringify({customer:DB.session.customer,shipping:DB.session.shipping,billing:DB.session.billing}));}catch(_){}
       DB.session._perfil=false;
+      saveLead(4);
       DB.ui.checkStep=4;render();window.scrollTo(0,0);
     });
     df.querySelectorAll("[name=bkind]").forEach(r=>r.addEventListener("change",()=>{
@@ -2960,6 +3011,7 @@ async function submitOrder(){
   }
   notifyNewOrder(o); /* aviso por correo a ventas@ (no bloquea la confirmación) */
   track("purchase",{transaction_id:o.number,value:orderTotals(o).total,currency:"COP"});
+  completeLead();
   DB.ui.lastOrder=o;
   s.cart=[];s.receipt=null;s.payMode=null;
   DB.ui.checkStep=5;
