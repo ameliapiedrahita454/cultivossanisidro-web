@@ -252,19 +252,21 @@ footer .col a:hover{color:var(--mint)}
 <script src="/m.js" defer></script>
 <style>
 /* Cambio de idioma visible con bandera */
-.lang-switch{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:1.5px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--forest);background:#fff;white-space:nowrap;order:5;text-decoration:none}
-.lang-switch:hover{border-color:var(--forest)}
+.lang-switch{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1.5px solid var(--line);border-radius:999px;background:#fff;order:5;flex:none}
+.lang-switch a,.lang-switch .ls-on{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:800;color:var(--ink-soft);text-decoration:none;white-space:nowrap}
+.lang-switch .ls-on{background:#EEF0F7;color:var(--forest)}
+.lang-switch a:hover{color:var(--forest);background:#F4F4F8}
 .lang-switch svg{border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.1);flex:none}
 .site-inner .btn-primary{order:6}
+.brand-word{white-space:nowrap}
 @media(max-width:960px){.lang-switch{order:0;margin-left:auto}.menu-toggle{margin-left:0!important}}
-.lang-switch .ls-s{display:none}
-@media(max-width:560px){.lang-switch .ls-l{display:none}.lang-switch .ls-s{display:inline}.lang-switch{padding:7px 10px}}
+@media(max-width:420px){.lang-switch a,.lang-switch .ls-on{padding:5px 7px;gap:4px}.site-inner{gap:10px}}
 </style>
 </head>
 <body>
 <header class="site"><div class="site-inner">
   <a class="brand" href="/"><img src="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/site/img-00.png" alt="San Isidro"><span class="brand-word">SAN ISIDRO<small>HYDRANGEAS FARMING</small></span></a>
-  <a class="lang-switch" href="/pedidos/" hreflang="es" lang="es" title="Ver en español"><svg viewBox="0 0 3 2" width="22" height="15" aria-hidden="true"><rect width="3" height="1" fill="#FCD116"/><rect y="1" width="3" height=".5" fill="#003893"/><rect y="1.5" width="3" height=".5" fill="#CE1126"/></svg><span class="ls-l">Español</span><span class="ls-s">ES</span></a>
+  <div class="lang-switch" role="group" aria-label="Language / Idioma"><span class="ls-on" aria-current="true" title="English"><svg viewBox="0 0 19 10" width="20" height="11" aria-hidden="true"><rect width="19" height="10" fill="#B22234"/><path d="M0 1.15h19M0 2.7h19M0 4.23h19M0 5.77h19M0 7.3h19M0 8.85h19" stroke="#fff" stroke-width=".77"/><rect width="7.6" height="5.38" fill="#3C3B6E"/></svg>EN</span><a href="/pedidos/" hreflang="es" lang="es" title="Ver en español"><svg viewBox="0 0 3 2" width="20" height="14" aria-hidden="true"><rect width="3" height="1" fill="#FCD116"/><rect y="1" width="3" height=".5" fill="#003893"/><rect y="1.5" width="3" height=".5" fill="#CE1126"/></svg>ES</a></div>
   <button class="menu-toggle" id="menuToggle" aria-label="Menu" aria-expanded="false">☰</button>
   <nav class="main" id="mainNav">
     <a href="#about">About</a><a href="#colors">Colors</a><a href="#farm">Our farm</a><a href="#impact">Impact</a><a href="/export-hydrangeas-from-colombia">Export</a><a href="/wedding-flowers-colombia">Weddings</a><a href="#care">Flower care</a><a href="#faq">FAQ</a><a href="#contact">Contact</a><a href="/blog/">Blog</a><a href="/pedidos/">Español · Pedidos</a>
