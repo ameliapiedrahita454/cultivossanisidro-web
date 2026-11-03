@@ -1329,15 +1329,15 @@ function viewHome(){
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="eyebrow">Directo del cultivo · La Ceja, Antioquia</div>
-        <h1>255 colores de hortensia, directo del cultivo</h1>
-        <div class="script" aria-hidden="true" style="margin:2px 0 6px">de nuestro cultivo</div>
-        <p class="sub">Para floristerías, eventos y mayoristas de toda Colombia. Precio por tallo visible, pedido mínimo 10 tallos por color, pago por transferencia o crédito para clientes frecuentes. Despachamos con Coordinadora a todo el país.</p>
+        <div class="eyebrow">Pioneros de la hortensia blanca en Antioquia · desde 1997</div>
+        <h1>Hortensias por mayor desde $1.000 el tallo, sin intermediarios</h1>
+        <div class="script" aria-hidden="true" style="margin:2px 0 6px">255 colores listos para tu próximo diseño</div>
+        <p class="sub">Compra directo al cultivo y gana margen en cada ramo: blanca natural y 255 colores pintados a mano, desde 10 tallos por color, con el precio a la vista. Para floristerías, decoradores, eventos y mayoristas, con pago por transferencia o a crédito.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <a class="btn btn-primary btn-lg" href="#/pedir">Ver colores y pedir</a>
-          <a class="btn btn-ghost btn-lg" href="#/como-funciona">Cómo funciona</a>
+          <a class="btn btn-primary btn-lg" href="#/pedir">Ver colores y precios</a>
+          <a class="btn btn-ghost btn-lg" href="https://wa.me/573113676027?text=Hola%20San%20Isidro%2C%20quiero%20cotizar%20hortensias%20por%20mayor" target="_blank" rel="noopener">Cotizar por WhatsApp</a>
         </div>
-        <p style="margin-top:16px;font-size:12.5px;color:var(--gold);letter-spacing:.06em">${despachoHint()} · Tallos desde $1.000</p>
+        <p style="margin-top:16px;font-size:12.5px;color:var(--gold);letter-spacing:.06em">${despachoHint()} · Envío a toda Colombia</p>
       </div>
       <div class="hero-visual lamina" style="padding:12px;background:var(--paper);border:1px solid var(--line);box-shadow:none"><div style="border:1px solid var(--line);overflow:hidden;height:100%">
         <video autoplay muted loop playsinline preload="metadata" poster="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/home/img-01.jpg" style="width:100%;height:100%;object-fit:cover;display:block" aria-label="Video del cultivo San Isidro: campo, cosecha y sala de empaque"><source src="/san-isidro-video.mp4" type="video/mp4"><source src="/san-isidro-video.webm" type="video/webm"></video>
@@ -1348,7 +1348,7 @@ function viewHome(){
       <div class="claim"><b>15</b><span>Hectáreas</span></div>
       <div class="claim"><b>255</b><span>Colores</span></div>
       <div class="claim"><b>50.000</b><span>Tallos semanales</span></div>
-      <div class="claim"><b>#1</b><span>Pioneros en cultivo de hortensia en Colombia</span></div>
+      <div class="claim"><b>1.ª</b><span>Hectárea de hortensia blanca de Antioquia</span></div>
       <div class="claim"><b>12+</b><span>Países de exportación</span></div>
       <div class="claim"><b>45.000.000</b><span>Flores comercializadas</span></div>
       <div class="claim"><b>17</b><span>Madres cabeza de hogar en el equipo</span></div>
@@ -1360,7 +1360,7 @@ function viewHome(){
       <div class="eyebrow">— I — Catálogo de colores 2026</div>
       <h2>Un color para cada diseño</h2>
       <div class="script">del blanco a todos los colores</div>
-      <p class="lead">Más de 240 colores de hortensia: 36 familias de tonalidades y 23 técnicas de pintado, en 5 tamaños desde Mini Green hasta Jumbo.</p>
+      <p class="lead">255 colores de hortensia: 36 familias de tonalidades y 23 técnicas de pintado, en grados desde Mini H hasta Jumbo.</p>
     </div>
     <div class="color-grid" style="margin-top:28px">
       ${DB.colors.filter(c=>c.active&&c.avail!=="agotado").slice(0,8).map(colorCard).join("")}
