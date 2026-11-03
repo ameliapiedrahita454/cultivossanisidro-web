@@ -1188,9 +1188,32 @@ async function sbFetchOrders(notify){
     _sbKnown.add(row.id);
   });
   DB.orders.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
-  if(news>0) toast(news===1?"Nuevo pedido recibido":"Hay "+news+" pedidos nuevos");
+  if(news>0){toast(news===1?"Nuevo pedido recibido":"Hay "+news+" pedidos nuevos");siAlertNewOrder(news,DB.admin.notifications[0]);}
   if(changed) render();
 }
+/* ---------- Aviso con sonido, notificación del navegador y título parpadeante al entrar un pedido ---------- */
+let _siAudio=null,_siTitle=document.title,_siBlink=null;
+function siUnlockAlerts(){
+  try{if(!_siAudio)_siAudio=new (window.AudioContext||window.webkitAudioContext)();if(_siAudio.state==="suspended")_siAudio.resume();}catch(_){}
+  try{if("Notification" in window&&Notification.permission==="default")Notification.requestPermission();}catch(_){}
+}
+document.addEventListener("click",()=>{if(DB.admin.user)siUnlockAlerts();},{passive:true});
+function siBeep(){
+  try{if(!_siAudio)_siAudio=new (window.AudioContext||window.webkitAudioContext)();const a=_siAudio;if(a.state==="suspended")a.resume();
+    [0,0.28,0.56].forEach((d,k)=>{const o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.value=k===2?1175:880;
+      g.gain.setValueAtTime(0.0001,a.currentTime+d);g.gain.exponentialRampToValueAtTime(0.35,a.currentTime+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+d+0.24);
+      o.connect(g);g.connect(a.destination);o.start(a.currentTime+d);o.stop(a.currentTime+d+0.26);});
+  }catch(_){}
+}
+function siAlertNewOrder(n,x){
+  siBeep();
+  try{if("Notification" in window&&Notification.permission==="granted"&&x){
+    const nt=new Notification(n===1?"Nuevo pedido "+x.order:"Hay "+n+" pedidos nuevos",{body:(x.client||"Cliente")+(x.city?" · "+x.city:"")+" · "+money(x.total||0),tag:"pedido-"+x.order,requireInteraction:true});
+    nt.onclick=()=>{window.focus();go("/admin");nt.close();};
+  }}catch(_){}
+  if(document.hidden&&!_siBlink){let on=false;_siBlink=setInterval(()=>{document.title=(on=!on)?"🔔 Nuevo pedido":_siTitle;},1000);}
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&_siBlink){clearInterval(_siBlink);_siBlink=null;document.title=_siTitle;}});
 function sbPushDirty(){
   if(!SB_SESSION) return;
   DB.orders.filter(o=>o._dirty&&o.remoteId).forEach(o=>{sbSaveOrder(o).catch(()=>{});});
