@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Hortensias por mayor directo del cultivo | 255 colores con precio por tallo | San Isidro</title>
+<title>Hortensias al por mayor directo del cultivo | 255 colores con precio por tallo | San Isidro</title>
 <link rel="icon" type="image/png" href="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/site/img-00.png">
 <link rel="apple-touch-icon" href="https://mluvrdqusnbkqsoeuexc.supabase.co/storage/v1/object/public/fotos/site/img-00.png">
 <meta name="description" content="Compra hortensias premium directamente del cultivo en La Ceja, Antioquia. Pioneros en hortensia blanca con +30 años de experiencia: 255 colores y técnicas de pintado, 8 grados desde Mini H hasta Jumbo. Pedidos en línea para floristerías, decoradores y eventos con envío nacional por Coordinadora Mercantil a toda Colombia.">
@@ -723,7 +723,7 @@ fieldset.fs{min-width:0;width:100%} .form-grid{min-width:0} .field input,.field 
   <input type="text" name="bot-field"><input type="text" name="subject"><input type="text" name="pedido"><input type="text" name="registrado"><input type="text" name="cliente"><input type="text" name="contacto"><input type="text" name="celular"><input type="email" name="correo"><input type="email" name="email"><input type="text" name="documento"><input type="text" name="ciudad"><input type="text" name="direccion"><textarea name="productos"></textarea><input type="text" name="tallos"><input type="text" name="total"><input type="text" name="forma_pago"><input type="text" name="comprobante_nota"><input type="text" name="panel"><input type="file" name="comprobante">
 </form>
 <main id="app"><div id="seo-static">
-<h1>Hortensias por mayor en Colombia, directo del cultivo San Isidro</h1>
+<h1>Hortensias al por mayor en Colombia, directo del cultivo San Isidro</h1>
 <p>Cultivo San Isidro es un cultivo mayorista de hortensias en La Ceja, Antioquia, desde 1997: el cultivo donde se sembró la primera hectárea de hortensia blanca de Antioquia. Vendemos al por mayor, directo del cultivo y sin intermediarios, a floristerías, decoradores, wedding planners, empresas de eventos, supermercados, comercializadoras y otros cultivos de toda Colombia.</p>
 <h2>Cómo comprar hortensias al por mayor</h2>
 <ul>
@@ -983,7 +983,7 @@ function despachoHint(){
   try{
     const now=new Date(new Date().toLocaleString("en-US",{timeZone:"America/Bogota"}));
     const dow=now.getDay(); const h=now.getHours(), m=now.getMinutes();
-    if(dow>=1&&dow<=5&&h<10){ const mins=(10*60)-(h*60+m); const hh=Math.floor(mins/60), mm=mins%60; return `Pide en ${hh>0?hh+" h ":""}${mm} min y despachamos hoy mismo`; }
+    if(dow>=1&&dow<=5&&h<10){ const mins=(10*60)-(h*60+m); const hh=Math.floor(mins/60), mm=mins%60; return `Pide en ${hh>0?hh+" h ":""}${mm} min y despachamos hoy mismo · después de las 10:00 a. m. despachamos ${dow===5?"el lunes":"mañana"}`; }
     if(dow>=1&&dow<=4) return "Pide ahora y despachamos mañana a primera hora";
     if(dow===5&&h>=10) return "Pide ahora y despachamos el lunes a primera hora";
     return "Pide ahora y despachamos el lunes a primera hora";
@@ -1175,7 +1175,7 @@ async function sbFetchOrders(notify){
   rows.forEach(row=>{
     const local=DB.orders.find(x=>x.remoteId===row.id);
     if(!local){
-      const o=row.datos||{};o.remoteId=row.id;o.state=row.estado;o.number=row.numero;
+      const o=row.datos||{};o.id=row.id;o.remoteId=row.id;o.state=row.estado;o.number=row.numero;o.client=o.client||{};o.shipping=o.shipping||{};o.billing=o.billing||{};o.dispatchRule=o.dispatchRule||{sameDay:false};o.invoiceState=o.invoiceState||"Pendiente de facturar";o.createdAt=o.createdAt||row.created_at;
       o.history=o.history||[];o.items=o.items||[];
       DB.orders.push(o);changed=true;
       if(!_sbKnown.has(row.id)&&notify){
@@ -1185,7 +1185,7 @@ async function sbFetchOrders(notify){
     } else if(!local._dirty){
       const remoto=row.datos||{};
       if(row.estado!==local.state||JSON.stringify(remoto.history||[]).length!==JSON.stringify(local.history||[]).length){
-        Object.assign(local,remoto);local.remoteId=row.id;local.state=row.estado;local.number=row.numero;changed=true;
+        Object.assign(local,remoto);local.id=row.id;local.remoteId=row.id;local.state=row.estado;local.number=row.numero;changed=true;
       }
     }
     _sbKnown.add(row.id);
@@ -1303,7 +1303,7 @@ function loadDB(){
   try{
     const raw=localStorage.getItem(LS_KEY); if(!raw) return;
     const d=JSON.parse(raw);
-    if(Array.isArray(d.orders)) DB.orders=d.orders;
+    if(Array.isArray(d.orders)) DB.orders=d.orders.filter(o=>o&&typeof o==="object"&&o.number).map(o=>{if(o.remoteId)o.id=o.remoteId;o.items=Array.isArray(o.items)?o.items:[];o.history=Array.isArray(o.history)?o.history:[];o.client=o.client||{};o.shipping=o.shipping||{};o.billing=o.billing||{};o.dispatchRule=o.dispatchRule||{sameDay:false};o.invoiceState=o.invoiceState||"Pendiente de facturar";o.createdAt=o.createdAt||new Date(0).toISOString();return o;});
     if(Array.isArray(d.clients)) d.clients.forEach(c=>{if(!DB.clients.some(x=>x.id===c.id))DB.clients.push(c);});
     if(d.seq) DB.seq=d.seq; if(d.invoiceSeq) DB.invoiceSeq=d.invoiceSeq;
     if(Array.isArray(d.notifications)) DB.admin.notifications=d.notifications;
@@ -1351,7 +1351,7 @@ function viewHome(){
     <div class="hero-inner">
       <div>
         <div class="eyebrow">Pioneros de la hortensia blanca en Antioquia · desde 1997</div>
-        <h1>Hortensias por mayor directo del cultivo, sin intermediarios</h1>
+        <h1>Hortensias al por mayor directo del cultivo, sin intermediarios</h1>
         <div class="script" aria-hidden="true" style="margin:2px 0 6px">255 colores listos para tu próximo diseño</div>
         <p class="sub">Compra directo al cultivo y gana margen en cada ramo: blanca natural y 255 colores pintados a mano, desde 10 tallos por color, con el precio a la vista. Para floristerías, decoradores, eventos y mayoristas, con pago por transferencia o a crédito.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap">
@@ -1365,9 +1365,9 @@ function viewHome(){
       </div><div style="padding-top:11px;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);text-align:center">Lámina I — El cultivo en movimiento</div>
     </div>
     <div class="claims">
-      <div class="claim"><b>30</b><span>Años de oficio</span></div>
-      <div class="claim"><b>15</b><span>Hectáreas</span></div>
-      <div class="claim"><b>255</b><span>Colores</span></div>
+      <div class="claim"><b>30</b><span>Años de experiencia</span></div>
+      <div class="claim"><b>15</b><span>Hectáreas de cultivo</span></div>
+      <div class="claim"><b>255</b><span>Colores disponibles</span></div>
       <div class="claim"><b>50.000</b><span>Tallos semanales</span></div>
       <div class="claim"><b>1.ª</b><span>Hectárea de hortensia blanca de Antioquia</span></div>
       <div class="claim"><b>12+</b><span>Países de exportación</span></div>
@@ -2177,7 +2177,7 @@ function renderDrawer(){
     ${acts.length?`<div class="action-row">${acts.join("")}</div>`:""}
     <div class="card card-pad" style="margin-bottom:14px">
       <h4 style="font-size:14px;color:var(--ink-soft);margin-bottom:10px">PRODUCTOS</h4>
-      ${o.items.map(i=>{const c=colorById(i.colorId);return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span>${esc(c.name)} — ${i.size}<b style="margin-left:auto">${i.qty} × ${money(i.unit)} = ${money(i.qty*i.unit)}</b></div>`;}).join("")}
+      ${o.items.map(i=>{const c=colorById(i.colorId)||{name:i.name||i.colorId||"Color",code:i.code||"",cat:"",tone:["#e4e4e4","#d6d6d6","#c8c8c8","#bcbcbc"]};return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span>${esc(c.name)} — ${i.size}<b style="margin-left:auto">${i.qty} × ${money(i.unit)} = ${money(i.qty*i.unit)}</b></div>`;}).join("")}
       <div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700;color:var(--forest)"><span>${t.stems} tallos · ${t.lines} productos</span><span>${money(t.total)}</span></div>
     </div>
     <div class="grid-2" style="gap:14px;margin-bottom:14px">
@@ -2192,7 +2192,7 @@ function renderDrawer(){
           ?`Modo: <b style="color:var(--forest)">CRÉDITO</b> · ${o.creditPaid?'<span class="badge st-pago">Pagado</span>':'<span class="badge st-verificar">Por cobrar</span>'}`
           :o.paymentException
             ?`Modo: <b style="color:var(--forest)">APROBADO POR EXCEPCIÓN</b> · ${o.creditPaid?'<span class="badge st-pago">Pago recibido</span>':'<span class="badge st-verificar">Pago pendiente</span>'}<br>Comprobante: 📎 ${esc(o.receipt?o.receipt.name:"—")}`
-            :`Comprobante: 📎 ${esc(o.receipt?o.receipt.name:"—")}${o.receipt&&o.receipt.dataUrl&&o.receipt.type.startsWith("image")?`<img class="upload-preview" src="${o.receipt.dataUrl}" alt="Comprobante">`:" <small style='color:var(--ink-faint)'>(archivo de prueba)</small>"}`}<br>
+            :`Comprobante: 📎 ${esc(o.receipt?o.receipt.name:"—")}${o.receipt&&o.receipt.dataUrl&&String(o.receipt.type||"").startsWith("image")?`<img class="upload-preview" src="${o.receipt.dataUrl}" alt="Comprobante">`:" <small style='color:var(--ink-faint)'>(archivo de prueba)</small>"}`}<br>
         ${o.dispatch?`Transportadora: <b>${esc(o.dispatch.carrier)}</b><br>Guía: <b>${esc(o.dispatch.guide)}</b><br>Entregó: ${esc(o.dispatch.by)} · ${fdt(o.dispatch.at)} · Contraentrega`:"Aún sin despacho."}</p></div>
     </div>
     <div class="card card-pad">
@@ -3074,7 +3074,7 @@ async function submitOrder(){
   const t=cartTotals();
   const o=createOrder({
     client:{...s.customer},shipping:{...s.shipping},billing:{...s.billing},
-    items:s.cart.map(i=>({...i})),receipt:credito?null:{...s.receipt},
+    items:s.cart.map(i=>{const c=colorById(i.colorId);return {...i,name:c?c.name:i.colorId,code:c&&c.code?c.code:""};}),receipt:credito?null:{...s.receipt},
     payMode:credito?"credito":"transferencia",
     charges:{recargo:t.recargo,conservante:t.conserv,caja:t.caja}
   });
