@@ -1191,6 +1191,7 @@ async function sbFetchOrders(notify){
     _sbKnown.add(row.id);
   });
   DB.orders.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  if(rows.length<500){const vivos=new Set(rows.map(r=>r.id));const antes=DB.orders.length;DB.orders=DB.orders.filter(o=>!o.remoteId||o._dirty||vivos.has(o.remoteId));if(DB.orders.length!==antes)changed=true;}
   if(news>0){toast(news===1?"Nuevo pedido recibido":"Hay "+news+" pedidos nuevos");siAlertNewOrder(news,DB.admin.notifications[0]);}
   if(changed) render();
 }
@@ -2122,14 +2123,16 @@ function adPedidos(){
   const q=(DB.admin.search||"").toLowerCase();
   const sf=DB.admin.stateFilter||"";
   let list=DB.orders.slice();
-  if(sf) list=list.filter(o=>o.state===sf);
+  const FIN=["Entregado","Cancelado"];
+  if(sf) list=list.filter(o=>o.state===sf); else if(!DB.admin.showFin) list=list.filter(o=>!FIN.includes(o.state));
   if(q) list=list.filter(o=>o.number.toLowerCase().includes(q)||o.client.name.toLowerCase().includes(q)||o.shipping.city.toLowerCase().includes(q)||fdate(o.createdAt).includes(q));
   return `
   <h2>Pedidos</h2>
-  <p class="admin-sub">${DB.orders.length} pedidos en total · haz clic en un pedido para ver su detalle, historial y acciones</p>
+  <p class="admin-sub">${list.length} pedidos${sf?" en estado "+sf:DB.admin.showFin?" en total":" activos (los entregados y cancelados están ocultos)"} · haz clic en un pedido para ver su detalle, historial y acciones</p>
   <div class="admin-toolbar">
     <input id="adSearch" type="search" placeholder="Buscar: número, cliente, ciudad o fecha…" value="${esc(DB.admin.search||"")}" style="flex:1;min-width:220px">
     <select id="adState"><option value="">Todos los estados</option>${ORDER_STATES.map(s=>`<option ${sf===s?"selected":""}>${s}</option>`).join("")}</select>
+    <button class="btn btn-soft btn-sm" data-toggle-fin>${DB.admin.showFin?"Ocultar finalizados":"Ver finalizados"} (${DB.orders.filter(o=>FIN.includes(o.state)).length})</button>
     <button class="btn btn-soft btn-sm" data-export-orders>⬇ Exportar CSV</button>
   </div>
   <div class="card"><div class="tbl-scroll"><table class="tbl">
@@ -2690,7 +2693,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2760,6 +2763,7 @@ document.addEventListener("click",async e=>{
   }
 
   /* --- admin --- */
+  if(d.toggleFin!==undefined){DB.admin.showFin=!DB.admin.showFin;render();return;}
   if(d.sec!==undefined){e.preventDefault();DB.admin.section=d.sec;DB.ui.drawer=null;DB.ui.clientSel=null;DB.ui.colEdit=null;render();return;}
   if(d.logout!==undefined){e.preventDefault();DB.admin.user=null;SB_SESSION=null;try{sessionStorage.removeItem("si_auth");sessionStorage.removeItem("si_sb")}catch(_){ }render();return;}
   if(d.openOrder!==undefined){DB.ui.drawer=d.openOrder;render();return;}
