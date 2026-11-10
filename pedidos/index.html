@@ -920,7 +920,7 @@ function isCreditClient(name){
 const AUTH_SALT="sanisidro-2026";
 const USERS={"lorenza": {"name": "Lorenza Piedrahita", "role": "admin", "h": "f561c589add698a472c0876eeacd234c9817e4ead1956f5fe9c76aafc5a77843"}, "amelia": {"name": "Amelia Piedrahita", "role": "admin", "h": "c12042b1026e5782821faaf313de7f2b12aacf31a2236eacb8aebd2a3f0230e0"}, "sandra": {"name": "Sandra Ríos", "role": "ventas", "h": "4dbae11f5ba60deb3db8eab8305ccb0308ba0b872151cca81329cffe9b68e3f4"}, "facturacion": {"name": "Facturación", "role": "fact", "h": "19709ca18349ecd32b1f5555f0bf14bf258233c35d403c6deb7359e4ebbb03e3"}, "sala": {"name": "Sala de preparación", "role": "sala", "h": "20bfcf06bb6d97d4c59b9a9c3a2c66dc0d1db83974e8095b04dbfd9ec489a7d9"}, "despacho": {"name": "Despacho", "role": "desp", "h": "94e67cdef0240a40173ea08ac0ebdcb1527afa007141253141fd54b62bf2a3b6"}};
 /* Todos los usuarios ven todas las secciones del panel. */
-const ALL_SECTIONS=["dash","mes","pedidos","pend","fact","sala","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
+const ALL_SECTIONS=["dash","guia","mes","pedidos","pend","fact","sala","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
 const ROLES = {
   admin:{name:"Administrador",sections:ALL_SECTIONS},
   ventas:{name:"Ventas",sections:ALL_SECTIONS},
@@ -1941,7 +1941,7 @@ function viewRapido(){
 /* ============================================================
    PANEL ADMINISTRATIVO
    ============================================================ */
-const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["sala","Sala","🌿"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
+const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["guia","Guía de uso","📖"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["sala","Sala","🌿"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
 function viewAdmin(){
   if(!DB.admin.user) return viewLogin();
   const role=ROLES[DB.admin.role];
@@ -1955,7 +1955,7 @@ function viewAdmin(){
     desp:DB.orders.filter(o=>["Listo para despacho","Despachado","En tránsito"].includes(o.state)).length,
     reclamos:DB.reclamos.filter(r=>r.estado==="Pendiente").length
   };
-  const body={dash:adDash,mes:adMes,pedidos:adPedidos,fact:adFact,sala:adSala,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
+  const body={dash:adDash,guia:adGuia,mes:adMes,pedidos:adPedidos,fact:adFact,sala:adSala,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
   return `<div class="admin-shell">
     <aside class="admin-side">
       <div class="who"><b>${esc(DB.admin.user)}</b><small>${role.name}</small></div>
@@ -2154,6 +2154,37 @@ function adPedidos(){
 }
 
 /* ---------- Detalle de pedido (drawer) ---------- */
+function adGuia(){
+  const paso=(n,t,b)=>`<div class="card card-pad" style="margin-bottom:12px"><div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:0 0 34px;height:34px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">${n}</div><div><b style="font-size:15px">${t}</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">${b}</div></div></div></div>`;
+  return `
+  <h2>Guía de uso del panel</h2>
+  <p class="admin-sub">Qué hacer desde que entra un pedido hasta que se entrega. Cada paso cambia el estado del pedido y queda registrado en su historial.</p>
+  ${paso(1,"Llega un pedido","Suena un aviso, aparece una notificación y una barra azul <b>«Nuevo pedido recibido»</b>. Los pedidos nuevos quedan en <b>Pedidos</b> con el estado <span class=\"badge st-verificar\">Pago por verificar</span>. Haz clic en el pedido para ver cliente, dirección, productos, comprobante e historial. Si no ves el aviso, el contador rojo al lado de «Pedidos» muestra cuántos esperan revisión.")}
+  ${paso(2,"Revisar y aprobar (Ventas)","Dentro del pedido: si pagó por <b>transferencia</b>, revisa el comprobante y pulsa <b>«✓ Verificar y confirmar pago»</b>. Si es un cliente a <b>crédito</b>, pulsa <b>«✓ Aprobar pedido a crédito»</b>. Si el pago no ha llegado pero quieres avanzar, usa <b>«◐ Aprobar y dejar pago pendiente»</b>. Si el pedido no procede, <b>«Cancelar pedido»</b>. ¿Hay que corregir algo (cantidades, colores, unir dos pedidos del mismo cliente)? Usa <b>«✏️ Editar pedido»</b> antes de facturar.")}
+  ${paso(3,"Enviar a facturación","Con el pago confirmado aparece el botón <b>«Confirmar pedido → a facturación»</b>. El pedido pasa a la cola de <b>Facturación</b>.")}
+  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b>: <b>«⬇ Exportar pendientes para macro Excel»</b> descarga los datos para la macro. Genera la factura en Excel, escribe el <b>Nº de factura</b> (y el descuento si lo hay) y pulsa <b>«Marcar facturado»</b>.")}
+  ${paso(5,"Pasar a sala","Abre el pedido facturado y pulsa <b>«🌿 Pasar a sala»</b>. El pedido pasa a <b>Sala</b> y a la <b>Orden de trabajo</b> (vista consolidada por cliente, color, grado y cantidad, con botón para imprimir).")}
+  ${paso(6,"Preparar (Sala)","En <b>Sala</b> cada pedido es una tarjeta con la lista de colores, grado y tallos. Marca cada línea a medida que se prepara. Cuando todas están marcadas se activa <b>«✓ Pedido listo para despacho»</b>.")}
+  ${paso(7,"Despachar (Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe la transportadora (Coordinadora Mercantil), el <b>número de guía</b> y quién entrega, y pulsa <b>«🚚 Registrar despacho»</b>. Luego, en «En camino», marca <b>«En tránsito»</b> y, cuando el cliente lo reciba, <b>«✓ Entregado»</b>. Con eso el pedido sale de todos los pendientes; en Pedidos queda guardado bajo «Ver finalizados».")}
+  ${paso(8,"Cobrar un crédito","Los pedidos a crédito (o aprobados con pago pendiente) muestran la etiqueta «pago pendiente». Cuando el cliente pague, abre el pedido y pulsa <b>«💳 Registrar pago»</b>.")}
+  <div class="card card-pad" style="margin-top:18px"><b>Buscar y exportar</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">En <b>Pedidos</b> puedes buscar por número, cliente, ciudad o fecha, filtrar por estado y descargar <b>«⬇ Exportar CSV»</b> (una fila por color, con grado, cantidad y precio; se abre en Excel). <b>Clientes</b> muestra el historial de cada cliente y si tiene crédito. <b>Reclamos</b> registra y aprueba reclamaciones.</div></div>
+  <div class="card card-pad" style="margin-top:12px"><b>Si algo no abre o se ve raro</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">Recarga la página (F5) o cierra sesión y vuelve a entrar. Los pedidos viven en la base de datos: no se pierden al recargar.</div></div>`;
+}
+function editRowHTML(i,ix){
+  const cols=DB.colors.filter(c=>c.active);
+  const cur=colorById(i.colorId);
+  const opts=(cur&&!cols.some(c=>c.id===cur.id)?[cur]:[]).concat(cols).map(c=>`<option value="${c.id}" ${c.id===i.colorId?"selected":""}>${esc(c.name)}${c.code?" ("+esc(c.code)+")":""}</option>`).join("");
+  const sz=SIZES.map(s=>`<option ${s===i.size?"selected":""}>${s}</option>`).join("");
+  return `<tr><td><select data-ed-color style="width:100%;min-width:150px">${opts}</select></td><td><select data-ed-size>${sz}</select></td><td class="num"><input type="number" min="1" step="1" value="${i.qty}" data-ed-qty style="width:70px;text-align:right"></td><td class="num"><input type="number" min="0" step="100" value="${i.unit}" data-ed-unit style="width:90px;text-align:right"></td><td><button type="button" class="btn btn-danger btn-sm" data-ed-rm>🗑</button></td></tr>`;
+}
+function editOrderForm(o){
+  return `<h4 style="font-size:14px;color:var(--ink-soft);margin-bottom:10px">✏️ EDITANDO PEDIDO ${esc(o.number)}</h4>
+    <div class="tbl-scroll"><table class="tbl" id="editOrderTbl"><thead><tr><th>Color</th><th>Grado</th><th class="num">Tallos</th><th class="num">Precio unit.</th><th></th></tr></thead><tbody>${o.items.map(editRowHTML).join("")}</tbody></table></div>
+    <div class="action-row" style="margin:10px 0"><button type="button" class="btn btn-soft btn-sm" data-ed-add>+ Agregar línea</button></div>
+    <div class="field"><label>Notas del pedido</label><textarea data-ed-notes rows="2" style="width:100%">${esc(o.notes||"")}</textarea></div>
+    <p style="font-size:12.5px;color:var(--ink-faint);margin:8px 0 12px">Al cambiar el color o el grado se pone el precio de lista; puedes ajustarlo. Los cambios quedan en el historial del pedido.</p>
+    <div class="action-row" style="margin:0"><button type="button" class="btn btn-primary" data-ed-save="${o.id}">💾 Guardar cambios</button><button type="button" class="btn btn-soft" data-ed-cancel>Cancelar</button></div>`;
+}
 function renderDrawer(){
   const o=DB.orders.find(x=>x.id===DB.ui.drawer);
   if(!o) return "";
@@ -2177,6 +2208,7 @@ function renderDrawer(){
   if((o.payMode==="credito"||o.paymentException)&&!o.creditPaid) acts.push(`<button class="btn btn-hydr" data-credit-paid="${o.id}">💳 Registrar pago ${o.payMode==="credito"?"del crédito":"pendiente"}</button>`);
   if(o.state==="Despachado") acts.push(`<button class="btn btn-soft" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`);
   if(o.state==="En tránsito") acts.push(`<button class="btn btn-primary" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`);
+  if(["Pago por verificar","Pago confirmado","Pendiente de facturación"].includes(o.state)&&["admin","ventas","fact"].includes(role)&&DB.ui.editOrder!==o.id) acts.push(`<button class="btn btn-soft" data-edit-order="${o.id}">✏️ Editar pedido</button>`);
   return `<div class="drawer-back" data-close-drawer><div class="drawer">
     <button class="modal-close" data-close-drawer aria-label="Cerrar">✕</button>
     <div class="eyebrow">Pedido</div>
@@ -2184,9 +2216,9 @@ function renderDrawer(){
     <p class="admin-sub">${fdt(o.createdAt)} · ${o.dispatchRule.sameDay?"antes":"después"} de las 10:00 a. m. → despacho ${o.dispatchRule.sameDay?"mismo día":"día siguiente"} (tras confirmar pago)</p>
     ${acts.length?`<div class="action-row">${acts.join("")}</div>`:""}
     <div class="card card-pad" style="margin-bottom:14px">
-      <h4 style="font-size:14px;color:var(--ink-soft);margin-bottom:10px">PRODUCTOS</h4>
+      ${DB.ui.editOrder===o.id?editOrderForm(o):`<h4 style="font-size:14px;color:var(--ink-soft);margin-bottom:10px">PRODUCTOS</h4>
       ${o.items.map(i=>{const c=colorById(i.colorId)||{name:i.name||i.colorId||"Color",code:i.code||"",cat:"",tone:["#e4e4e4","#d6d6d6","#c8c8c8","#bcbcbc"]};return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span>${esc(c.name)} — ${i.size}<b style="margin-left:auto">${i.qty} × ${money(i.unit)} = ${money(i.qty*i.unit)}</b></div>`;}).join("")}
-      <div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700;color:var(--forest)"><span>${t.stems} tallos · ${t.lines} productos</span><span>${money(t.total)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700;color:var(--forest)"><span>${t.stems} tallos · ${t.lines} productos</span><span>${money(t.total)}</span></div>`}
     </div>
     <div class="grid-2" style="gap:14px;margin-bottom:14px">
       <div class="card card-pad"><h4 style="font-size:13px;color:var(--ink-soft)">CLIENTE</h4>
@@ -2689,16 +2721,16 @@ function exportFact(){
   toast("Pendientes exportados para la macro de Excel");
 }
 function exportOrders(){
-  const rows=[["Nº pedido","Fecha","Hora","Cliente","Ciudad","Tallos","Valor","Estado","Nº factura","Guía"]];
-  DB.orders.forEach(o=>{const t=orderTotals(o);rows.push([o.number,fdate(o.createdAt),ftime(o.createdAt),o.client.name,o.shipping.city,t.stems,t.total,o.state,o.invoice?o.invoice.number:"",o.dispatch?o.dispatch.guide:""]);});
+  const rows=[["Nº pedido","Fecha","Hora","Cliente","Ciudad","Estado","Color","Código","Grado","Cantidad (tallos)","Precio unit.","Subtotal línea","Tallos del pedido","Valor del pedido","Nº factura","Guía"]];
+  DB.orders.forEach(o=>{const t=orderTotals(o);const base=[o.number,fdate(o.createdAt),ftime(o.createdAt),o.client.name,o.shipping.city,o.state];const fin=[t.stems,t.total,o.invoice?o.invoice.number:"",o.dispatch?o.dispatch.guide:""];if(!o.items.length)rows.push([...base,"","","","","","",...fin]);o.items.forEach(i=>{const c=colorById(i.colorId);rows.push([...base,c?c.name:(i.name||i.colorId),c?c.code:(i.code||""),i.size,i.qty,i.unit,i.qty*i.unit,...fin]);});});
   download("pedidos-cultivo-san-isidro.csv",rows.map(csvRow).join("\n"));
-  toast("Pedidos exportados");
+  toast("Pedidos exportados: una fila por color");
 }
 /* ============================================================
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2768,11 +2800,32 @@ document.addEventListener("click",async e=>{
   }
 
   /* --- admin --- */
+  if(d.editOrder!==undefined){DB.ui.editOrder=d.editOrder;render();return;}
+  if(d.edCancel!==undefined){DB.ui.editOrder=null;render();return;}
+  if(d.edAdd!==undefined){const tb=document.querySelector("#editOrderTbl tbody");if(tb){const c=DB.colors.find(x=>x.active)||DB.colors[0];const s=SIZES[3];const tmp=document.createElement("tbody");tmp.innerHTML=editRowHTML({colorId:c.id,size:s,qty:MIN_TALLOS_COLOR,unit:(c.prices&&c.prices[s])||0},tb.children.length);tb.appendChild(tmp.firstElementChild);}return;}
+  if(d.edRm!==undefined){const tr=t.closest("tr");if(tr){if(tr.parentNode.children.length>1)tr.remove();else toast("El pedido debe tener al menos una línea",true);}return;}
+  if(d.edSave!==undefined){
+    const o=DB.orders.find(x=>x.id===d.edSave);if(!o)return;
+    const items=[];
+    for(const tr of document.querySelectorAll("#editOrderTbl tbody tr")){
+      const colorId=tr.querySelector("[data-ed-color]").value,size=tr.querySelector("[data-ed-size]").value;
+      const qty=parseInt(tr.querySelector("[data-ed-qty]").value)||0,unit=Math.max(0,parseInt(tr.querySelector("[data-ed-unit]").value)||0);
+      if(qty<=0){toast("Revisa las cantidades: deben ser mayores a 0",true);return;}
+      const c=colorById(colorId);items.push({colorId,size,qty,unit,name:c?c.name:colorId,code:c&&c.code?c.code:""});
+    }
+    if(!items.length){toast("El pedido debe tener al menos una línea",true);return;}
+    const antes=orderTotals(o);
+    o.items=items;o.notes=(document.querySelector("[data-ed-notes]")?.value||"").trim();
+    if(o.prep)o.prep=o.items.map(()=>false);
+    const ahora=orderTotals(o);
+    pushHistory(o,`Pedido editado: ${items.length} línea${items.length!==1?"s":""}, ${ahora.stems} tallos, ${money(ahora.total)} (antes: ${antes.stems} tallos, ${money(antes.total)})`,DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
+    DB.ui.editOrder=null;toast("Pedido "+o.number+" actualizado");render();return;
+  }
   if(d.toggleFin!==undefined){DB.admin.showFin=!DB.admin.showFin;render();return;}
   if(d.sec!==undefined){e.preventDefault();DB.admin.section=d.sec;DB.ui.drawer=null;DB.ui.clientSel=null;DB.ui.colEdit=null;render();return;}
   if(d.logout!==undefined){e.preventDefault();DB.admin.user=null;SB_SESSION=null;try{sessionStorage.removeItem("si_auth");sessionStorage.removeItem("si_sb")}catch(_){ }render();return;}
   if(d.openOrder!==undefined){DB.ui.drawer=d.openOrder;render();return;}
-  if(d.closeDrawer!==undefined){if(!e.target.closest(".drawer")||e.target.closest(".modal-close")){DB.ui.drawer=null;render();}return;}
+  if(d.closeDrawer!==undefined){if(!e.target.closest(".drawer")||e.target.closest(".modal-close")){DB.ui.drawer=null;DB.ui.editOrder=null;render();}return;}
   if(d.gotoDesp!==undefined){DB.admin.section="desp";DB.ui.drawer=null;render();return;}
   if(d.notifX!==undefined){DB.admin.notifications.shift();render();return;}
   if(d.notifOpen!==undefined){const o=DB.orders.find(x=>x.number===d.notifOpen);DB.admin.section="pedidos";DB.ui.drawer=o?o.id:null;DB.admin.notifications.shift();render();return;}
@@ -2897,6 +2950,7 @@ function confirmCancel(){return true;} /* prototipo: sin diálogo bloqueante */
 /* Delegación de cambios (inputs que se re-renderizan) */
 document.addEventListener("change",e=>{
   const el=e.target;const d=el.dataset||{};
+  if(el.matches&&el.matches("[data-ed-color],[data-ed-size]")){const tr=el.closest("tr");const c=colorById(tr.querySelector("[data-ed-color]").value);const s=tr.querySelector("[data-ed-size]").value;const u=tr.querySelector("[data-ed-unit]");if(c&&c.prices&&c.prices[s]!=null)u.value=c.prices[s];return;}
   if(d.qin!==undefined&&DB.ui.modal){DB.ui.modal.qty[d.qin]=Math.max(0,parseInt(el.value)||0);renderModal();return;}
   if(el.name==="payMode"){DB.session.payMode=el.value;render();return;}
   if(d.cqin!==undefined){DB.session.cart[+d.cqin].qty=Math.max(MIN_TALLOS_COLOR,parseInt(el.value)||MIN_TALLOS_COLOR);render();return;}
