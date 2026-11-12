@@ -2162,7 +2162,7 @@ function adGuia(){
   ${paso(1,"Llega un pedido","Suena un aviso, aparece una notificación y una barra azul <b>«Nuevo pedido recibido»</b>. Los pedidos nuevos quedan en <b>Pedidos</b> con el estado <span class=\"badge st-verificar\">Pago por verificar</span>. Haz clic en el pedido para ver cliente, dirección, productos, comprobante e historial. Si no ves el aviso, el contador rojo al lado de «Pedidos» muestra cuántos esperan revisión.")}
   ${paso(2,"Revisar y aprobar (Ventas)","Dentro del pedido: si pagó por <b>transferencia</b>, revisa el comprobante y pulsa <b>«✓ Verificar y confirmar pago»</b>. Si es un cliente a <b>crédito</b>, pulsa <b>«✓ Aprobar pedido a crédito»</b>. Si el pago no ha llegado pero quieres avanzar, usa <b>«◐ Aprobar y dejar pago pendiente»</b>. Si el pedido no procede, <b>«Cancelar pedido»</b>. ¿Hay que corregir algo (cantidades, colores, unir dos pedidos del mismo cliente)? Usa <b>«✏️ Editar pedido»</b> antes de facturar.")}
   ${paso(3,"Enviar a facturación","Con el pago confirmado aparece el botón <b>«Confirmar pedido → a facturación»</b>. El pedido pasa a la cola de <b>Facturación</b>.")}
-  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b>: <b>«⬇ Exportar pendientes para macro Excel»</b> descarga los datos para la macro. Genera la factura en Excel, escribe el <b>Nº de factura</b> (y el descuento si lo hay) y pulsa <b>«Marcar facturado»</b>.")}
+  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> aparece una tarjeta por cada pedido que ya pasó por el paso 3 (si no ves ninguna, al pedido le falta ese paso). <b>a)</b> Pulsa <b>«⬇ Exportar»</b>: se descarga un archivo .csv a tu carpeta de Descargas (no abre ninguna página); ábrelo en Excel o cárgalo en la macro del cultivo. <b>b)</b> Genera la factura en la macro como siempre. <b>c)</b> Escribe el <b>número de factura</b> que dio la macro (y el descuento si lo hay) en la tarjeta del pedido y pulsa <b>«✓ Marcar facturado»</b>. El pedido queda Facturado y pasa a Sala.")}
   ${paso(5,"Pasar a sala","Abre el pedido facturado y pulsa <b>«🌿 Pasar a sala»</b>. El pedido pasa a <b>Sala</b> y a la <b>Orden de trabajo</b> (vista consolidada por cliente, color, grado y cantidad, con botón para imprimir).")}
   ${paso(6,"Preparar (Sala)","En <b>Sala</b> cada pedido es una tarjeta con la lista de colores, grado y tallos. Marca cada línea a medida que se prepara. Cuando todas están marcadas se activa <b>«✓ Pedido listo para despacho»</b>.")}
   ${paso(7,"Despachar (Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe la transportadora (Coordinadora Mercantil), el <b>número de guía</b> y quién entrega, y pulsa <b>«🚚 Registrar despacho»</b>. Luego, en «En camino», marca <b>«En tránsito»</b> y, cuando el cliente lo reciba, <b>«✓ Entregado»</b>. Con eso el pedido sale de todos los pendientes; en Pedidos queda guardado bajo «Ver finalizados».")}
@@ -2202,7 +2202,7 @@ function renderDrawer(){
     acts.push(`<button class="btn btn-danger" data-act="Cancelado" data-oid="${o.id}">Cancelar pedido</button>`);
   }
   if(o.state==="Pago confirmado") acts.push(`<button class="btn btn-primary" data-act="Pendiente de facturación" data-oid="${o.id}">Confirmar pedido → a facturación</button>`);
-  if(o.state==="Pendiente de facturación"&&(can("fact")||role==="admin")) acts.push(`<button class="btn btn-hydr" data-act="Facturado" data-oid="${o.id}">🧾 Marcar facturado (macro Excel)</button>`);
+  if(o.state==="Pendiente de facturación"&&(can("fact")||role==="admin")) acts.push(`<button class="btn btn-hydr" data-goto-fact>🧾 Ir a facturación →</button>`);
   if(o.state==="Facturado") acts.push(`<button class="btn btn-primary" data-act="En preparación" data-oid="${o.id}">🌿 Pasar a sala</button>`);
   if(o.state==="Listo para despacho"&&(can("desp")||role==="admin")) acts.push(`<button class="btn btn-primary" data-goto-desp>Ir a despacho →</button>`);
   if((o.payMode==="credito"||o.paymentException)&&!o.creditPaid) acts.push(`<button class="btn btn-hydr" data-credit-paid="${o.id}">💳 Registrar pago ${o.payMode==="credito"?"del crédito":"pendiente"}</button>`);
@@ -2252,16 +2252,22 @@ function adFact(){
   <div class="note green" style="margin-top:0">Flujo: pago confirmado → pedido entra a esta cola → <b>Exportar para macro Excel</b> → generas la factura en Excel → registras aquí el número → el pedido pasa a sala.</div>
   <h3 class="serif" style="font-size:21px;color:var(--forest);margin:22px 0 10px">Pendientes de facturar (${pend.length})</h3>
   ${pend.length?`
-  <div class="action-row"><button class="btn btn-hydr" data-export-fact>⬇ Exportar pendientes para macro Excel</button></div>
-  <div class="card"><div class="tbl-scroll"><table class="tbl">
-    <thead><tr><th>Pedido</th><th>Cliente</th><th>NIT/Doc</th><th class="num">Total</th><th class="num">Descuento</th><th>Nº factura (macro)</th><th></th></tr></thead>
-    <tbody>${pend.map(o=>`<tr>
-      <td style="white-space:nowrap"><b>${o.number}</b></td><td>${esc(o.billing.name)}</td><td>${esc(o.billing.doc)}</td><td class="num">${money(orderTotals(o).total)}</td>
-      <td class="num"><input type="number" min="0" step="1000" placeholder="0" data-fact-disc="${o.id}" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;width:110px;text-align:right"></td>
-      <td><input placeholder="Ej: FSI-00120" data-fact-no="${o.id}" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;width:130px"></td>
-      <td><button class="btn btn-primary btn-sm" data-fact-ok="${o.id}">Marcar facturado</button></td>
-    </tr>`).join("")}</tbody>
-  </table></div></div>`:`<div class="card card-pad" style="color:var(--ink-faint)">No hay pedidos pendientes de facturar. ✨</div>`}
+  <div class="card card-pad" style="margin-bottom:14px"><b>Cómo facturar un pedido (3 pasos)</b>
+    <ol style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8;color:var(--ink-soft)">
+      <li><b>Exportar:</b> pulsa «⬇ Exportar». Se descarga un archivo <b>.csv</b> a tu carpeta de <b>Descargas</b> (cliente, NIT, color, grado, cantidad y precio). Ábrelo en Excel o cárgalo en la macro del cultivo. No abre ninguna página: solo descarga el archivo.</li>
+      <li><b>Facturar en la macro</b> como siempre y anota el número de factura que generó.</li>
+      <li><b>Registrar aquí:</b> escribe ese número (y el descuento, si lo hay) en la tarjeta del pedido y pulsa «✓ Marcar facturado». El pedido pasa a Sala.</li>
+    </ol></div>
+  <div class="action-row" style="margin-top:0"><button class="btn btn-hydr" data-export-fact>⬇ Exportar todos los pendientes para la macro (.csv)</button></div>
+  <div class="grid-2">${pend.map(o=>{const t=orderTotals(o);return `<div class="card card-pad">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b style="font-size:17px">${o.number}</b><b style="color:var(--forest)">${money(t.total)}</b></div>
+      <p style="font-size:14px;color:var(--ink-soft);margin:4px 0 12px"><b>${esc(o.billing.name||o.client.name)}</b> · ${esc(((o.billing.doctype||"")+" "+(o.billing.doc||"")).trim())}<br>${t.stems} tallos · ${o.items.length} color${o.items.length!==1?"es":""} · ${esc(o.shipping.city)}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+        <div class="field" style="margin:0"><label>Nº de factura (de la macro)</label><input placeholder="Ej: FSI-00120" data-fact-no="${o.id}" style="width:160px"></div>
+        <div class="field" style="margin:0"><label>Descuento ($)</label><input type="number" min="0" step="1000" placeholder="0" data-fact-disc="${o.id}" style="width:110px;text-align:right"></div>
+      </div>
+      <div class="action-row" style="margin:12px 0 0"><button class="btn btn-primary btn-sm" data-fact-ok="${o.id}">✓ Marcar facturado</button><button class="btn btn-soft btn-sm" data-export-fact-one="${o.id}">⬇ Exportar este pedido</button><button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver pedido</button></div>
+    </div>`;}).join("")}</div>`:`<div class="card card-pad" style="color:var(--ink-soft)"><b>No hay pedidos pendientes de facturar.</b><br><span style="font-size:14px">Aquí aparecen los pedidos después de confirmar el pago y pulsar «Confirmar pedido → a facturación» en el detalle del pedido (sección Pedidos).</span></div>`}
   <h3 class="serif" style="font-size:21px;color:var(--forest);margin:30px 0 10px">Facturas registradas (${done.length})</h3>
   <div class="card"><div class="tbl-scroll"><table class="tbl">
     <thead><tr><th>Factura</th><th>Fecha</th><th>Pedido</th><th>Cliente</th><th class="num">Valor</th><th class="num">Descuento</th><th>Origen</th></tr></thead>
@@ -2709,16 +2715,16 @@ function exportGeneral(){
   download("reporte-ventas-cultivo-san-isidro.csv",rows.map(csvRow).join("\n"));
   toast("Reporte general exportado (CSV para Excel)");
 }
-function exportFact(){
+function exportFact(oid){
   const rows=[["Nº pedido","Fecha pedido","Tipo","Razón social / Nombre","Tipo doc","NIT / Documento","Correo facturación","Dirección","Ciudad","Departamento","Color","Código","Tamaño","Cantidad","Precio unitario","Subtotal línea","Total pedido"]];
-  DB.orders.filter(o=>o.state==="Pendiente de facturación").forEach(o=>{
+  DB.orders.filter(o=>o.state==="Pendiente de facturación"&&(!oid||o.id===oid)).forEach(o=>{
     const tot=orderTotals(o).total;
-    o.items.forEach(i=>{const c=colorById(i.colorId);
+    o.items.forEach(i=>{const c=colorById(i.colorId)||{name:i.name||i.colorId,code:i.code||""};
       rows.push([o.number,fdate(o.createdAt),o.billing.kind,o.billing.name,o.billing.doctype||"",o.billing.doc,o.billing.email,o.billing.address||"",o.billing.city||"",o.billing.dept||"",c.name,c.code,i.size,i.qty,i.unit,i.qty*i.unit,tot]);
     });
   });
-  download("pendientes-facturar-macro.csv",rows.map(csvRow).join("\n"));
-  toast("Pendientes exportados para la macro de Excel");
+  download(oid?"pedido-para-macro.csv":"pendientes-facturar-macro.csv",rows.map(csvRow).join("\n"));
+  toast("Archivo .csv descargado en tu carpeta de Descargas: ábrelo en Excel o cárgalo en la macro");
 }
 function exportOrders(){
   const rows=[["Nº pedido","Fecha","Hora","Cliente","Ciudad","Estado","Color","Código","Grado","Cantidad (tallos)","Precio unit.","Subtotal línea","Tallos del pedido","Valor del pedido","Nº factura","Guía"]];
@@ -2730,7 +2736,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2827,6 +2833,8 @@ document.addEventListener("click",async e=>{
   if(d.openOrder!==undefined){DB.ui.drawer=d.openOrder;render();return;}
   if(d.closeDrawer!==undefined){if(!e.target.closest(".drawer")||e.target.closest(".modal-close")){DB.ui.drawer=null;DB.ui.editOrder=null;render();}return;}
   if(d.gotoDesp!==undefined){DB.admin.section="desp";DB.ui.drawer=null;render();return;}
+  if(d.gotoFact!==undefined){DB.admin.section="fact";DB.ui.drawer=null;render();return;}
+  if(d.exportFactOne!==undefined){exportFact(d.exportFactOne);return;}
   if(d.notifX!==undefined){DB.admin.notifications.shift();render();return;}
   if(d.notifOpen!==undefined){const o=DB.orders.find(x=>x.number===d.notifOpen);DB.admin.section="pedidos";DB.ui.drawer=o?o.id:null;DB.admin.notifications.shift();render();return;}
   if(d.act!==undefined&&d.oid!==undefined){
@@ -2851,7 +2859,7 @@ document.addEventListener("click",async e=>{
     const o=DB.orders.find(x=>x.id===d.factOk);
     const input=document.querySelector(`[data-fact-no="${o.id}"]`);
     const discInput=document.querySelector(`[data-fact-disc="${o.id}"]`);
-    const num=(input&&input.value.trim())||("FSI-"+String(DB.invoiceSeq).padStart(5,"0"));
+    const num=(input&&input.value.trim());if(!num){toast("Escribe el número de factura que generó la macro",true);if(input)input.focus();return;}
     const disc=Math.min(Math.max(0,parseInt(discInput&&discInput.value)||0), orderTotals(o).total);
     o.discount=disc;
     o.invoice={number:num,at:new Date().toISOString(),externalId:"macro-excel"};
