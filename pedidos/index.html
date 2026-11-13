@@ -1959,7 +1959,7 @@ function viewAdmin(){
   return `<div class="admin-shell">
     <aside class="admin-side">
       <div class="who"><b>${esc(DB.admin.user)}</b><small>${role.name}</small></div>
-      ${ADMIN_SECTIONS.filter(s=>role.sections.includes(s[0])).map(s=>`<a href="#/admin" data-sec="${s[0]}" class="${sec===s[0]?"on":""}"><span class="ic">${s[2]}</span>${s[1]}${counts[s[0]]?`<span class="cnt">${counts[s[0]]}</span>`:""}</a>`).join("")}
+      ${(()=>{const EXTRA=["mes","colores","precios","ciudades","reportes","web"];const vis=ADMIN_SECTIONS.filter(s=>role.sections.includes(s[0]));const item=s=>`<a href="#/admin" data-sec="${s[0]}" class="${sec===s[0]?"on":""}"><span class="ic">${s[2]}</span>${s[1]}${counts[s[0]]?`<span class="cnt">${counts[s[0]]}</span>`:""}</a>`;const abierto=DB.admin.menuMore||EXTRA.includes(sec);return vis.filter(s=>!EXTRA.includes(s[0])).map(item).join("")+`<a href="#/admin" data-menu-more style="opacity:.8"><span class="ic">${abierto?"▾":"▸"}</span>Más (catálogo e informes)</a>`+(abierto?vis.filter(s=>EXTRA.includes(s[0])).map(item).join(""):"");})()}
       <a href="#/admin" data-logout style="margin-top:8px;opacity:.75">← Cerrar sesión</a>
     </aside>
     <div class="admin-main">${notifBar()}${body}</div>
@@ -1995,6 +1995,31 @@ function ordersInRange(days){
   const from=new Date();from.setDate(from.getDate()-days);from.setHours(0,0,0,0);
   return DB.orders.filter(o=>o.state!=="Cancelado"&&new Date(o.createdAt)>=from);
 }
+function adTareas(){
+  const act=DB.orders.filter(o=>!["Entregado","Cancelado"].includes(o.state));
+  const fila=(o,btns)=>{const t=orderTotals(o);return `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:200px"><b>${o.number}</b> · ${esc(o.client.name)} · ${esc(o.shipping.city)}<br><small style="color:var(--ink-faint)">${t.stems} tallos · ${money(t.total)} · ${fdate(o.createdAt)}${o.payMode==="credito"?" · crédito":""}</small></div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>`;};
+  const grupo=(titulo,lista,fn)=>lista.length?`<div style="margin-top:14px"><div class="eyebrow" style="margin-bottom:2px">${titulo} (${lista.length})</div>${lista.map(o=>fila(o,fn(o))).join("")}</div>`:"";
+  const porAprobar=act.filter(o=>o.state==="Pago por verificar");
+  const porFacturar=act.filter(o=>["Pago confirmado","Pendiente de facturación"].includes(o.state));
+  const aSala=act.filter(o=>o.state==="Facturado");
+  const enSala=act.filter(o=>o.state==="En preparación");
+  const porDespachar=act.filter(o=>o.state==="Listo para despacho");
+  const enCamino=act.filter(o=>["Despachado","En tránsito"].includes(o.state));
+  const porCobrar=DB.orders.filter(o=>(o.payMode==="credito"||o.paymentException)&&!o.creditPaid&&o.state!=="Cancelado"&&!["Pago por verificar"].includes(o.state));
+  const total=porAprobar.length+porFacturar.length+aSala.length+enSala.length+porDespachar.length+enCamino.length;
+  const abrir=o=>`<button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver</button>`;
+  return `<div class="card card-pad" style="margin-bottom:22px;border-left:4px solid var(--forest)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-size:19px;color:var(--forest)">✅ Pendientes de hoy</h3><small style="color:var(--ink-faint)">${total?total+" pedido"+(total!==1?"s":"")+" en proceso":"Todo al día"}</small></div>
+    ${total||porCobrar.length?"":`<p style="margin:10px 0 0;color:var(--ink-soft);font-size:14px">No hay pedidos pendientes. Cuando entre uno, aparece aquí con el botón de lo que toca hacer.</p>`}
+    ${grupo("1 · Por aprobar",porAprobar,o=>(o.payMode==="credito"?`<button class="btn btn-primary btn-sm" data-act="Pago confirmado" data-oid="${o.id}">✓ Aprobar crédito</button>`:`<button class="btn btn-primary btn-sm" data-open-order="${o.id}">Revisar comprobante</button>`)+abrir(o))}
+    ${grupo("2 · Por facturar",porFacturar,o=>`<button class="btn btn-primary btn-sm" data-goto-fact>🧾 Facturar</button>`+abrir(o))}
+    ${grupo("3 · Facturados, pasar a sala",aSala,o=>`<button class="btn btn-primary btn-sm" data-act="En preparación" data-oid="${o.id}">🌿 Pasar a sala</button>`+abrir(o))}
+    ${grupo("4 · En preparación (Sala)",enSala,o=>`<button class="btn btn-primary btn-sm" data-sec="sala">Ir a Sala</button>`+abrir(o))}
+    ${grupo("5 · Listos para despachar",porDespachar,o=>`<button class="btn btn-primary btn-sm" data-goto-desp>🚚 Despachar</button>`+abrir(o))}
+    ${grupo("6 · En camino",enCamino,o=>(o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:"")+`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`+abrir(o))}
+    ${grupo("💳 Créditos por cobrar",porCobrar,o=>`<button class="btn btn-hydr btn-sm" data-credit-paid="${o.id}">💳 Registrar pago</button>`+abrir(o))}
+  </div>`;
+}
 function adDash(){
   const days=DB.ui.dashDays||30;
   const os=ordersInRange(days);
@@ -2011,6 +2036,7 @@ function adDash(){
   const bySize=aggBy(os,i=>i.size);
   const byCity=aggByOrder(os,o=>o.shipping.city).slice(0,7);
   return `
+  ${adTareas()}
   <h2>Dashboard de ventas</h2>
   <p class="admin-sub">Pedidos no cancelados · <select id="dashDays" style="padding:6px 10px;border:1.5px solid var(--line);border-radius:8px">${[[7,"Últimos 7 días"],[30,"Últimos 30 días"],[90,"Últimos 90 días"]].map(d=>`<option value="${d[0]}" ${days===d[0]?"selected":""}>${d[1]}</option>`).join("")}</select> </p>
   <div class="kpis">
@@ -2159,9 +2185,10 @@ function adGuia(){
   return `
   <h2>Guía de uso del panel</h2>
   <p class="admin-sub">Qué hacer desde que entra un pedido hasta que se entrega. Cada paso cambia el estado del pedido y queda registrado en su historial.</p>
+  ${paso("★","Lo más fácil: usa «Pendientes de hoy»","En el <b>Dashboard</b>, arriba, está la lista <b>«✅ Pendientes de hoy»</b>: cada pedido aparece en el grupo de lo que le toca (aprobar, facturar, pasar a sala, despachar, entregar) con el botón de esa acción al lado. Puedes operar todo desde ahí sin recorrer las secciones.")}
   ${paso(1,"Llega un pedido","Suena un aviso, aparece una notificación y una barra azul <b>«Nuevo pedido recibido»</b>. Los pedidos nuevos quedan en <b>Pedidos</b> con el estado <span class=\"badge st-verificar\">Pago por verificar</span>. Haz clic en el pedido para ver cliente, dirección, productos, comprobante e historial. Si no ves el aviso, el contador rojo al lado de «Pedidos» muestra cuántos esperan revisión.")}
   ${paso(2,"Revisar y aprobar (Ventas)","Dentro del pedido: si pagó por <b>transferencia</b>, revisa el comprobante y pulsa <b>«✓ Verificar y confirmar pago»</b>. Si es un cliente a <b>crédito</b>, pulsa <b>«✓ Aprobar pedido a crédito»</b>. Si el pago no ha llegado pero quieres avanzar, usa <b>«◐ Aprobar y dejar pago pendiente»</b>. Si el pedido no procede, <b>«Cancelar pedido»</b>. ¿Hay que corregir algo (cantidades, colores, unir dos pedidos del mismo cliente)? Usa <b>«✏️ Editar pedido»</b> antes de facturar.")}
-  ${paso(3,"Enviar a facturación","Con el pago confirmado aparece el botón <b>«Confirmar pedido → a facturación»</b>. El pedido pasa a la cola de <b>Facturación</b>.")}
+  ${paso(3,"Pasa solo a Facturación","Al aprobar, el pedido pasa automáticamente a la cola de <b>Facturación</b> (estado «Pendiente de facturación»). No hay que hacer nada más en este paso.")}
   ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> aparece una tarjeta por cada pedido que ya pasó por el paso 3 (si no ves ninguna, al pedido le falta ese paso). <b>a)</b> Pulsa <b>«⬇ Exportar»</b>: se descarga un archivo .csv a tu carpeta de Descargas (no abre ninguna página); ábrelo en Excel o cárgalo en la macro del cultivo. <b>b)</b> Genera la factura en la macro como siempre. <b>c)</b> Escribe el <b>número de factura</b> que dio la macro (y el descuento si lo hay) en la tarjeta del pedido y pulsa <b>«✓ Marcar facturado»</b>. El pedido queda Facturado y pasa a Sala.")}
   ${paso(5,"Pasar a sala","Abre el pedido facturado y pulsa <b>«🌿 Pasar a sala»</b>. El pedido pasa a <b>Sala</b> y a la <b>Orden de trabajo</b> (vista consolidada por cliente, color, grado y cantidad, con botón para imprimir).")}
   ${paso(6,"Preparar (Sala)","En <b>Sala</b> cada pedido es una tarjeta con la lista de colores, grado y tallos. Marca cada línea a medida que se prepara. Cuando todas están marcadas se activa <b>«✓ Pedido listo para despacho»</b>.")}
@@ -2736,7 +2763,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2827,6 +2854,7 @@ document.addEventListener("click",async e=>{
     pushHistory(o,`Pedido editado: ${items.length} línea${items.length!==1?"s":""}, ${ahora.stems} tallos, ${money(ahora.total)} (antes: ${antes.stems} tallos, ${money(antes.total)})`,DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
     DB.ui.editOrder=null;toast("Pedido "+o.number+" actualizado");render();return;
   }
+  if(d.menuMore!==undefined){e.preventDefault();DB.admin.menuMore=!DB.admin.menuMore;render();return;}
   if(d.toggleFin!==undefined){DB.admin.showFin=!DB.admin.showFin;render();return;}
   if(d.sec!==undefined){e.preventDefault();DB.admin.section=d.sec;DB.ui.drawer=null;DB.ui.clientSel=null;DB.ui.colEdit=null;render();return;}
   if(d.logout!==undefined){e.preventDefault();DB.admin.user=null;SB_SESSION=null;try{sessionStorage.removeItem("si_auth");sessionStorage.removeItem("si_sb")}catch(_){ }render();return;}
@@ -2840,13 +2868,15 @@ document.addEventListener("click",async e=>{
   if(d.act!==undefined&&d.oid!==undefined){
     const o=DB.orders.find(x=>x.id===d.oid);
     if(d.act==="Cancelado"&&!confirmCancel())return;
-    applyState(o,d.act,DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
+    const quien=DB.admin.user+" ("+ROLES[DB.admin.role].name+")";
+    applyState(o,d.act,quien,d.act==="Pago confirmado");
+    if(d.act==="Pago confirmado"){applyState(o,"Pendiente de facturación",quien);toast("Pedido "+o.number+" aprobado → listo para facturar");return;}
     toast("Pedido "+o.number+" → "+d.act);return;
   }
   if(d.except!==undefined){
     const o=DB.orders.find(x=>x.id===d.except);
-    o.paymentException=true;o.state="Pago confirmado";
-    pushHistory(o,"Aprobado por excepción — pago queda pendiente de recibir",DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
+    o.paymentException=true;o.state="Pendiente de facturación";o.invoiceState="Pendiente de facturar";
+    pushHistory(o,"Aprobado por excepción — pago queda pendiente de recibir; pasa a facturación",DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
     toast("Pedido "+o.number+" aprobado con pago pendiente");render();return;
   }
   if(d.print!==undefined){window.print();return;}
