@@ -1032,8 +1032,22 @@ function orderTotals(o){
   const recargo=o.charges?o.charges.recargo:smallBoxSurcharge(o.items);
   const conserv=o.charges?(o.charges.conservante||0):0;
   const caja=o.charges?(o.charges.caja!=null?o.charges.caja:o.items.length*CAJA_CHARGE):o.items.length*CAJA_CHARGE;
-  const descuento=Math.min(o.discount||0, sub+recargo+conserv+caja);
-  return {stems,lines:o.items.length,sub,recargo,conserv,caja,descuento,total:sub+recargo+conserv+caja-descuento};
+  const transporte=o.charges?(+o.charges.transporte||0):0;
+  const descuento=Math.min(o.discount||0, sub+recargo+conserv+caja+transporte);
+  const total=sub+recargo+conserv+caja+transporte-descuento;
+  const abonado=(o.abonos||[]).reduce((a,x)=>a+(+x.valor||0),0);
+  return {stems,lines:o.items.length,sub,recargo,conserv,caja,transporte,descuento,total,abonado,saldo:Math.max(0,total-abonado)};
+}
+/* Pedido con pago pendiente (crédito o aprobado por excepción) */
+const pendientePago=o=>(o.payMode==="credito"||o.paymentException)&&!o.creditPaid;
+function registrarAbono(o,valor,quien){
+  const t=orderTotals(o);valor=Math.min(Math.max(0,Math.round(+valor||0)),t.saldo);
+  if(!valor)return false;
+  o.abonos=o.abonos||[];o.abonos.push({valor,at:new Date().toISOString(),by:quien});
+  const t2=orderTotals(o);
+  if(t2.saldo<=0){o.creditPaid=true;pushHistory(o,"Abono de "+money(valor)+" — pedido pagado en su totalidad",quien);}
+  else pushHistory(o,"Abono de "+money(valor)+" — saldo pendiente "+money(t2.saldo),quien);
+  return true;
 }
 function pushHistory(o,event,who){o.history.push({at:new Date().toISOString(),event,who:who||"Sistema"});o._dirty=true;}
 function createOrder(opts){
@@ -2048,7 +2062,7 @@ function adTareas(){
     ${grupo("3 · Por facturar",porFacturar,o=>`<button class="btn btn-primary btn-sm" data-goto-fact>🧾 Facturar</button>`+abrir(o))}
     ${grupo("4 · Facturados: imprimir orden de trabajo y despachar",porDespachar,o=>`<button class="btn btn-soft btn-sm" data-sec="orden">🖨 Orden de trabajo</button><button class="btn btn-primary btn-sm" data-goto-desp>🚚 Despachar</button>`+abrir(o))}
     ${grupo("5 · En camino",enCamino,o=>(sinGuia(o)?`<button class="btn btn-hydr btn-sm" data-goto-desp>Nº de guía pendiente</button>`:"")+(o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:"")+`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`+abrir(o))}
-    ${grupo("💳 Créditos por cobrar",porCobrar,o=>`<button class="btn btn-hydr btn-sm" data-credit-paid="${o.id}">💳 Registrar pago</button>`+abrir(o))}
+    ${grupo("💳 Créditos por cobrar",porCobrar,o=>`<span style="font-size:13px;color:var(--danger);font-weight:700;align-self:center">Saldo ${money(orderTotals(o).saldo)}</span><button class="btn btn-hydr btn-sm" data-open-order="${o.id}">➕ Abono</button><button class="btn btn-soft btn-sm" data-credit-paid="${o.id}">💳 Pagó todo</button>`)}
   </div>`;
 }
 function adDash(){
@@ -2205,7 +2219,7 @@ function adPedidos(){
       <td class="num">${t.stems}</td><td class="num"><b>${money(t.total)}</b></td>
       <td>${o.invoice?o.invoice.number:'<small style="color:var(--ink-faint)">'+o.invoiceState+"</small>"}</td>
       <td style="white-space:nowrap">${o.dispatch?`<small>${esc(o.dispatch.guide)}</small>`:"—"}</td>
-      <td><span class="badge ${STATE_CLASS[o.state]}">${o.state}</span>${(o.payMode==="credito"||o.paymentException)&&!o.creditPaid?'<br><small style="color:var(--warn)">pago pendiente</small>':""}</td>
+      <td><span class="badge ${STATE_CLASS[o.state]}">${o.state}</span>${(o.payMode==="credito"||o.paymentException)&&!o.creditPaid?'<br><small style="color:var(--warn)">saldo ${money(orderTotals(o).saldo)}</small>':""}</td>
     </tr>`;}).join("")||'<tr><td colspan="9" style="text-align:center;color:var(--ink-faint);padding:30px">Sin resultados.</td></tr>'}</tbody>
   </table></div></div>`;
 }
@@ -2223,7 +2237,7 @@ function adGuia(){
   ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> hay una tarjeta por pedido. Factura como siempre — <b>World Office</b> si lleva IVA, o la <b>plantilla de Excel</b> — (si quieres, «⬇ Exportar» descarga un .csv con los datos del pedido). Escribe el <b>número de factura</b> (y el descuento si lo hay) y pulsa <b>«✓ Marcar facturado»</b>. El pedido pasa a <b>Despacho</b> y aparece en la <b>Orden de trabajo</b>.")}
   ${paso(5,"Imprimir la orden de trabajo","En <b>Orden de trabajo</b> están todos los pedidos facturados con cliente, color, grado, cantidad y día de despacho. Pulsa <b>«🖨 Imprimir»</b> y entrégala a quien prepara las flores.")}
   ${paso(6,"Despachar (Jorge / Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe el <b>número de guía</b> de Coordinadora si ya lo tienes y pulsa <b>«🚚 Registrar despacho»</b>. Si la guía llega después, regístrala en «En camino» con <b>«Guardar guía»</b>: el cliente la ve al instante en <b>Mis pedidos</b>. Luego marca <b>«En tránsito»</b> y, cuando el cliente reciba, <b>«✓ Entregado»</b>.")}
-  ${paso(7,"Cobrar un crédito","Los pedidos a crédito (o avanzados con pago pendiente) muestran la etiqueta «pago pendiente». Cuando el cliente pague, abre el pedido y pulsa <b>«💳 Registrar pago»</b>.")}
+  ${paso(7,"Cobrar un crédito (abonos)","Los pedidos a crédito (o avanzados con pago pendiente) muestran su <b>saldo</b>. Abre el pedido: en <b>Cartera · Abonos</b> escribes el valor que pagó y pulsas <b>«➕ Registrar abono»</b> (puedes registrar varios); cuando el saldo llega a cero el pedido queda pagado. Si paga todo de una vez, <b>«💳 Pagó todo»</b>. En Facturación puedes anotar el <b>transporte cobrado</b> en la factura: se suma al total del pedido.")}
   ${paso(8,"Colores, disponibilidad y precios","En <b>Más → Colores</b> puedes marcar un color como <b>Disponible / Pocas unidades / Agotado</b>, desactivarlo o cambiar su precio por grado; en <b>Más → Precios</b> cambias la tabla general. Todo se guarda en la base de datos y se refleja de inmediato en lo que ve el cliente.")}
   <div class="card card-pad" style="margin-top:18px"><b>Buscar y exportar</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">En <b>Pedidos</b> puedes buscar por número, cliente, ciudad o fecha, filtrar por estado y descargar <b>«⬇ Exportar CSV»</b> (una fila por color, con grado, cantidad, precio y día de despacho; se abre en Excel). <b>Clientes</b> muestra el historial de cada cliente y si tiene crédito. <b>Reclamos</b> registra y aprueba reclamaciones.</div></div>
   <div class="card card-pad" style="margin-top:12px"><b>Si algo no abre o se ve raro</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">Recarga la página (F5) o cierra sesión y vuelve a entrar. Los pedidos viven en la base de datos: no se pierden al recargar.</div></div>`;
@@ -2264,7 +2278,6 @@ function renderDrawer(){
   if(o.state==="Pago confirmado") acts.push(`<button class="btn btn-primary" data-act="Pendiente de facturación" data-oid="${o.id}">Confirmar pedido → a facturación</button>`);
   if(o.state==="Pendiente de facturación"&&(can("fact")||role==="admin")) acts.push(`<button class="btn btn-hydr" data-goto-fact>🧾 Ir a facturación →</button>`);
   if(["Facturado","En preparación","Listo para despacho"].includes(o.state)&&(can("desp")||role==="admin")){acts.push(`<button class="btn btn-soft" data-sec="orden">🖨 Orden de trabajo</button>`);acts.push(`<button class="btn btn-primary" data-goto-desp>🚚 Ir a despacho →</button>`);}
-  if((o.payMode==="credito"||o.paymentException)&&!o.creditPaid) acts.push(`<button class="btn btn-hydr" data-credit-paid="${o.id}">💳 Registrar pago ${o.payMode==="credito"?"del crédito":"pendiente"}</button>`);
   if(o.state==="Despachado") acts.push(`<button class="btn btn-soft" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`);
   if(o.state==="En tránsito") acts.push(`<button class="btn btn-primary" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`);
   if(["Pedido recibido","Pago por verificar","Pago confirmado","Pendiente de facturación"].includes(o.state)&&["admin","ventas","fact"].includes(role)&&DB.ui.editOrder!==o.id) acts.push(`<button class="btn btn-soft" data-edit-order="${o.id}">✏️ Editar pedido</button>`);
@@ -2278,8 +2291,14 @@ function renderDrawer(){
     <div class="card card-pad" style="margin-bottom:14px">
       ${DB.ui.editOrder===o.id?editOrderForm(o):`<h4 style="font-size:14px;color:var(--ink-soft);margin-bottom:10px">PRODUCTOS</h4>
       ${o.items.map(i=>{const c=colorById(i.colorId)||{name:i.name||i.colorId||"Color",code:i.code||"",cat:"",tone:["#e4e4e4","#d6d6d6","#c8c8c8","#bcbcbc"]};return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span>${esc(c.name)} — ${i.size}<b style="margin-left:auto">${i.qty} × ${money(i.unit)} = ${money(i.qty*i.unit)}</b></div>`;}).join("")}
+      ${t.transporte||t.descuento?`<div style="font-size:13px;color:var(--ink-soft);padding-top:8px">Flores + cajas: ${money(t.sub+t.recargo+t.conserv+t.caja)}${t.transporte?` · Transporte: ${money(t.transporte)}`:""}${t.descuento?` · Descuento: −${money(t.descuento)}`:""}</div>`:""}
       <div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700;color:var(--forest)"><span>${t.stems} tallos · ${t.lines} productos</span><span>${money(t.total)}</span></div>`}
     </div>
+    ${(o.payMode==="credito"||o.paymentException||(o.abonos&&o.abonos.length))?`<div class="card card-pad" style="margin-bottom:14px;border-left:4px solid ${o.creditPaid?"var(--ok)":"var(--gold)"}"><h4 style="font-size:13px;color:var(--ink-soft)">CARTERA · ABONOS</h4>
+      <p style="font-size:14px;margin:8px 0 6px">Total <b>${money(t.total)}</b> · Abonado <b>${money(t.abonado)}</b> · Saldo <b style="color:${t.saldo?"var(--danger)":"var(--ok)"}">${money(t.saldo)}</b>${o.creditPaid?` <span class="badge st-pago">Pagado</span>`:""}</p>
+      ${(o.abonos||[]).length?`<ul style="font-size:13px;color:var(--ink-soft);margin:0 0 8px 18px;padding:0">${o.abonos.map(a=>`<li>${fdate(a.at)} · ${money(a.valor)} · ${esc(a.by||"")}</li>`).join("")}</ul>`:""}
+      ${!o.creditPaid&&["admin","ventas","fact"].includes(role)?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><div class="field" style="margin:0"><label>Abono ($)</label><input type="number" min="0" step="1000" placeholder="${t.saldo}" data-abono-val="${o.id}" style="width:140px;text-align:right"></div><button class="btn btn-hydr btn-sm" data-abono-add="${o.id}">➕ Registrar abono</button><button class="btn btn-soft btn-sm" data-credit-paid="${o.id}">💳 Pagó todo (${money(t.saldo)})</button></div>`:""}
+    </div>`:""}
     <div class="grid-2" style="gap:14px;margin-bottom:14px">
       <div class="card card-pad"><h4 style="font-size:13px;color:var(--ink-soft)">CLIENTE</h4>
         <p style="font-size:14px;margin-top:8px"><b>${esc(o.client.name)}</b><br>${esc(o.client.contact||"")}<br>${esc(o.client.phone||"")}<br>${esc(o.client.email)}<br><small style="color:var(--ink-faint)">${esc(o.client.doc||"")}</small></p></div>
@@ -2324,6 +2343,7 @@ function adFact(){
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
         <div class="field" style="margin:0"><label>Nº de factura</label><input placeholder="Ej: FSI-00120" data-fact-no="${o.id}" style="width:160px"></div>
         <div class="field" style="margin:0"><label>Descuento ($)</label><input type="number" min="0" step="1000" placeholder="0" data-fact-disc="${o.id}" style="width:110px;text-align:right"></div>
+        <div class="field" style="margin:0"><label>Transporte cobrado ($)</label><input type="number" min="0" step="1000" placeholder="0" value="${o.charges&&o.charges.transporte?o.charges.transporte:""}" data-fact-trans="${o.id}" style="width:120px;text-align:right"></div>
       </div>
       <div class="action-row" style="margin:12px 0 0"><button class="btn btn-primary btn-sm" data-fact-ok="${o.id}">✓ Marcar facturado</button><button class="btn btn-soft btn-sm" data-export-fact-one="${o.id}">⬇ Exportar este pedido</button><button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver pedido</button></div>
     </div>`;}).join("")}</div>`:`<div class="card card-pad" style="color:var(--ink-soft)"><b>No hay pedidos pendientes de facturar.</b><br><span style="font-size:14px">Aquí aparecen los pedidos cuando registras el pago recibido o confirmas un pedido a crédito.</span></div>`}
@@ -2515,7 +2535,7 @@ function adClientes(){
     const total=os.reduce((a,o)=>a+orderTotals(o).total,0);
     const colorAgg=aggBy(os,i=>colorById(i.colorId).name).slice(0,5);
     const sizeAgg=aggBy(os,i=>i.size).slice(0,5);
-    const cartera=DB.orders.filter(o=>o.clientId===sel&&(o.payMode==="credito"||o.paymentException)&&!o.creditPaid&&o.state!=="Cancelado").reduce((a,o)=>a+orderTotals(o).total,0);
+    const cartera=DB.orders.filter(o=>o.clientId===sel&&pendientePago(o)&&o.state!=="Cancelado").reduce((a,o)=>a+orderTotals(o).saldo,0);
     return `<button class="btn btn-ghost btn-sm" data-client-back>← Todos los clientes</button>
     <h2 style="margin-top:14px">${esc(cl.name)} ${cl.credit?'<span class="badge st-fact" style="vertical-align:middle">CLIENTE CON CRÉDITO</span>':""}</h2>
     <p class="admin-sub">${esc(cl.type||"")} · ${esc(cl.doc||"")} · ${esc(cl.city||"")} · ${esc(cl.phone||"")} · ${esc(cl.email)}</p>
@@ -2777,7 +2797,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2938,19 +2958,31 @@ document.addEventListener("click",async e=>{
   if(d.print!==undefined){window.print();return;}
   if(d.creditPaid!==undefined){
     const o=DB.orders.find(x=>x.id===d.creditPaid);
-    o.creditPaid=true;pushHistory(o,"Pago recibido y registrado",DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
-    toast("Pago registrado para "+o.number);render();return;
+    const quien=DB.admin.user+" ("+ROLES[DB.admin.role].name+")";const saldo=orderTotals(o).saldo;
+    if(saldo>0)registrarAbono(o,saldo,quien);else{o.creditPaid=true;pushHistory(o,"Pago recibido y registrado",quien);}
+    toast("Pago completo registrado para "+o.number);render();return;
+  }
+  if(d.abonoAdd!==undefined){
+    const o=DB.orders.find(x=>x.id===d.abonoAdd);if(!o)return;
+    const v=+(document.querySelector(`[data-abono-val="${o.id}"]`)||{}).value||0;
+    if(v<=0){toast("Escribe el valor del abono",true);return;}
+    const saldoAntes=orderTotals(o).saldo;
+    if(!registrarAbono(o,v,DB.admin.user+" ("+ROLES[DB.admin.role].name+")")){toast("No hay saldo pendiente",true);return;}
+    toast(o.creditPaid?"Abono registrado — pedido pagado en su totalidad":"Abono registrado — saldo "+money(orderTotals(o).saldo)+(v>saldoAntes?" (se ajustó al saldo)":""));render();return;
   }
   if(d.factOk!==undefined){
     const o=DB.orders.find(x=>x.id===d.factOk);
     const input=document.querySelector(`[data-fact-no="${o.id}"]`);
     const discInput=document.querySelector(`[data-fact-disc="${o.id}"]`);
+    const transInput=document.querySelector(`[data-fact-trans="${o.id}"]`);
     const num=(input&&input.value.trim());if(!num){toast("Escribe el número de la factura",true);if(input)input.focus();return;}
+    o.charges=o.charges||{recargo:0,conservante:0,caja:o.items.length*CAJA_CHARGE};
+    o.charges.transporte=Math.max(0,parseInt(transInput&&transInput.value)||0);
     const disc=Math.min(Math.max(0,parseInt(discInput&&discInput.value)||0), orderTotals(o).total);
     o.discount=disc;
     o.invoice={number:num,at:new Date().toISOString(),externalId:"manual"};
     DB.invoiceSeq++;o.invoiceState="Facturada";o.state="Listo para despacho";
-    pushHistory(o,"Factura registrada: "+num+(disc?` · Descuento aplicado: ${money(disc)}`:"")+" — pasa a despacho",DB.admin.user);
+    pushHistory(o,"Factura registrada: "+num+(disc?` · Descuento aplicado: ${money(disc)}`:"")+(o.charges.transporte?` · Transporte: ${money(o.charges.transporte)}`:"")+" — pasa a despacho",DB.admin.user);
     toast("Factura "+num+" registrada para "+o.number+" → pasa a Despacho y a la Orden de trabajo");render();return;
   }
   if(d.dispatch!==undefined){
