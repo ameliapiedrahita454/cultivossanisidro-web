@@ -1698,6 +1698,7 @@ function viewCart(){
     <div class="cond-tile"><span class="cond-ico">✿</span><b>Conservante / Comida</b><p>Opcional. Indica cuántos sobres quieres por caja, a <b>${money(CONSERVANTE)}</b> cada uno.</p></div>
     <div class="cond-tile"><span class="cond-ico">→</span><b>Transporte</b><p>Coordinadora Mercantil, flete <b>contraentrega</b> (no incluido en este total). El tiempo de entrega lo define la transportadora según tu ciudad, normalmente <b>1 a 3 días hábiles</b>.</p></div>
   </div>
+  <div class="note blue" style="margin:18px 0 0"><b>¿Cómo se paga?</b> Al enviar el pedido <b>todavía no pagas</b>. Primero revisamos que tengamos tus flores disponibles y te confirmamos por WhatsApp; solo cuando recibas esa confirmación haces la transferencia y nos envías el comprobante por WhatsApp. Si eres cliente con crédito, tu pedido queda a crédito.</div>
   <div class="action-row" style="justify-content:space-between">
     <button class="btn btn-ghost" data-step="1">← Seguir agregando colores</button>
     <button class="btn btn-primary btn-lg" data-step="3">Continuar con los datos →</button>
@@ -1775,10 +1776,11 @@ function viewDatos(){
       ${fld("b_dept","Departamento",0,{value:b.dept})}
     </div>
   </fieldset>
-  <p class="fs-sub" style="margin:4px 0 0">Al continuar autorizas a Cultivo San Isidro a usar estos datos para gestionar tu pedido y contactarte sobre él (Ley 1581 de 2012).</p>
+  <div class="note blue" style="margin:14px 0 0"><b>Antes de enviar:</b> al pulsar «Enviar pedido» <b>no tienes que pagar todavía ni enviar comprobante</b>. Nuestro equipo revisa la disponibilidad de las flores y te confirma por WhatsApp al número que escribiste arriba. Cuando recibas la confirmación, haces la transferencia y nos mandas el comprobante por WhatsApp.</div>
+  <p class="fs-sub" style="margin:10px 0 0">Al continuar autorizas a Cultivo San Isidro a usar estos datos para gestionar tu pedido y contactarte sobre él (Ley 1581 de 2012).</p>
   <div class="action-row" style="justify-content:space-between">
     <button type="button" class="btn btn-ghost" data-step="2">← Volver al pedido</button>
-    <button type="submit" class="btn btn-primary btn-lg">Enviar pedido →</button>
+    <button type="submit" class="btn btn-primary btn-lg">Enviar pedido para confirmar disponibilidad →</button>
   </div>
   </form>`;
 }
