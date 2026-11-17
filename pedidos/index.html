@@ -2234,7 +2234,7 @@ function adGuia(){
   ${paso(1,"Llega un pedido","Suena un aviso, aparece una notificación y una barra azul <b>«Nuevo pedido recibido»</b>. El cliente eligió el <b>día de despacho</b> (lunes a viernes, sin festivos) y <b>todavía no ha pagado</b>: queda en <span class=\"badge st-recibido\">Pedido recibido</span> esperando que confirmes que hay flor.")}
   ${paso(2,"Confirmar disponibilidad (Ventas)","Revisa colores, grados y cantidades. <b>Si todo hay:</b> pulsa <b>«✓ Confirmar y avisar por WhatsApp»</b>: se abre WhatsApp con el mensaje listo para el cliente (pedido, total, día de despacho y los datos de la cuenta para pagar); solo tienes que enviarlo. El pedido pasa a <span class=\"badge st-verificar\">Pago por verificar</span>. Si es cliente a <b>crédito</b>, al confirmar pasa directo a Facturación. <b>Si falta algo:</b> pulsa <b>«✎ Proponer cambio»</b>, completa en el mensaje qué no hay y qué le puedes enviar, y ábrelo en WhatsApp. Cuando el cliente acepte, usa <b>«✏️ Editar pedido»</b> para ajustarlo y luego confirma.")}
   ${paso(3,"Registrar el pago","El cliente transfiere y te manda el comprobante por WhatsApp. Abre el pedido (o usa el grupo «Esperando el pago») y pulsa <b>«💳 Registrar pago recibido»</b>: el pedido pasa solo a la cola de <b>Facturación</b>. Si no ha pagado, <b>«💬 Recordar pago»</b> abre WhatsApp con un recordatorio.")}
-  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> hay una tarjeta por pedido. Factura como siempre — <b>World Office</b> si lleva IVA, o la <b>plantilla de Excel</b> — (si quieres, «⬇ Exportar» descarga un .csv con los datos del pedido). Escribe el <b>número de factura</b> (y el descuento si lo hay) y pulsa <b>«✓ Marcar facturado»</b>. El pedido pasa a <b>Despacho</b> y aparece en la <b>Orden de trabajo</b>.")}
+  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> hay una tarjeta por pedido. Factura como siempre — <b>World Office</b> si lleva IVA, o la <b>plantilla de Excel</b> — (si quieres, «⬇ Exportar» descarga un .csv con los datos del pedido). Escribe el <b>número de factura</b> (y el descuento y el transporte si los hay) y pulsa <b>«✓ Marcar facturado»</b>. El pedido pasa a <b>Despacho</b> y aparece en la <b>Orden de trabajo</b>. Luego, en «Facturas registradas» (o en el detalle del pedido), <b>«🧾 Factura PDF»</b> abre la factura ya llena con el formato de la macro para guardarla como PDF (Imprimir → Guardar como PDF) y enviársela al cliente. Antes de facturar, <b>«📄 Cuenta de cobro PDF»</b> hace lo mismo sin número.")}
   ${paso(5,"Imprimir la orden de trabajo","En <b>Orden de trabajo</b> están todos los pedidos facturados con cliente, color, grado, cantidad y día de despacho. Pulsa <b>«🖨 Imprimir»</b> y entrégala a quien prepara las flores.")}
   ${paso(6,"Despachar (Jorge / Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe el <b>número de guía</b> de Coordinadora si ya lo tienes y pulsa <b>«🚚 Registrar despacho»</b>. Si la guía llega después, regístrala en «En camino» con <b>«Guardar guía»</b>: el cliente la ve al instante en <b>Mis pedidos</b>. Luego marca <b>«En tránsito»</b> y, cuando el cliente reciba, <b>«✓ Entregado»</b>.")}
   ${paso(7,"Cobrar un crédito (abonos)","Los pedidos a crédito (o avanzados con pago pendiente) muestran su <b>saldo</b>. Abre el pedido: en <b>Cartera · Abonos</b> escribes el valor que pagó y pulsas <b>«➕ Registrar abono»</b> (puedes registrar varios); cuando el saldo llega a cero el pedido queda pagado. Si paga todo de una vez, <b>«💳 Pagó todo»</b>. En Facturación puedes anotar el <b>transporte cobrado</b> en la factura: se suma al total del pedido.")}
@@ -2277,6 +2277,7 @@ function renderDrawer(){
   }
   if(o.state==="Pago confirmado") acts.push(`<button class="btn btn-primary" data-act="Pendiente de facturación" data-oid="${o.id}">Confirmar pedido → a facturación</button>`);
   if(o.state==="Pendiente de facturación"&&(can("fact")||role==="admin")) acts.push(`<button class="btn btn-hydr" data-goto-fact>🧾 Ir a facturación →</button>`);
+  if(!["Pedido recibido","Cancelado"].includes(o.state)) acts.push(`<button class="btn btn-soft" data-factura-pdf="${o.id}">${o.invoice?"🧾 Factura PDF":"📄 Cuenta de cobro PDF"}</button>`);
   if(["Facturado","En preparación","Listo para despacho"].includes(o.state)&&(can("desp")||role==="admin")){acts.push(`<button class="btn btn-soft" data-sec="orden">🖨 Orden de trabajo</button>`);acts.push(`<button class="btn btn-primary" data-goto-desp>🚚 Ir a despacho →</button>`);}
   if(o.state==="Despachado") acts.push(`<button class="btn btn-soft" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`);
   if(o.state==="En tránsito") acts.push(`<button class="btn btn-primary" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`);
@@ -2321,6 +2322,65 @@ function renderDrawer(){
   </div></div>`;
 }
 
+/* ---------- Factura / cuenta de cobro imprimible (formato de la macro «Ventas Nacionales») ---------- */
+function numLetras(n){
+  n=Math.round(+n||0);
+  const U=["","Uno","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Once","Doce","Trece","Catorce","Quince","Dieciséis","Diecisiete","Dieciocho","Diecinueve","Veinte","Veintiuno","Veintidós","Veintitrés","Veinticuatro","Veinticinco","Veintiséis","Veintisiete","Veintiocho","Veintinueve"];
+  const D=["","","","Treinta","Cuarenta","Cincuenta","Sesenta","Setenta","Ochenta","Noventa"];
+  const C=["","Ciento","Doscientos","Trescientos","Cuatrocientos","Quinientos","Seiscientos","Setecientos","Ochocientos","Novecientos"];
+  const cien=x=>{if(x===0)return "";if(x===100)return "Cien";const c=Math.floor(x/100),r=x%100;let s=c?C[c]:"";if(r<30)s+=(s&&r?" ":"")+U[r];else{const d=Math.floor(r/10),u=r%10;s+=(s?" ":"")+D[d]+(u?" y "+U[u]:"");}return s;};
+  const un=s=>s.replace(/Veintiuno$/,"Veintiún").replace(/Uno$/,"Un");
+  const mil=x=>{const m=Math.floor(x/1000),r=x%1000;let s="";if(m===1)s="Mil";else if(m>1)s=un(cien(m))+" Mil";const c=cien(r);return s+(s&&c?" ":"")+c;};
+  if(n===0)return "Cero Pesos 00/100";
+  const M=Math.floor(n/1000000),r=n%1000000;
+  let s="";if(M===1)s="Un Millón";else if(M>1)s=un(mil(M))+" Millones";
+  const rr=mil(r);s+=(s&&rr?" ":"")+rr;
+  return s+" Pesos 00/100";
+}
+function fechaCorta(iso){const d=new Date(iso);const m=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return String(d.getDate()).padStart(2,"0")+"-"+m[d.getMonth()]+"-"+String(d.getFullYear()).slice(-2);}
+function facturaHTML(o){
+  const t=orderTotals(o);const c=o.client||{},b=o.billing||{},s=o.shipping||{};
+  const emi=o.invoice?new Date(o.invoice.at):new Date();const ven=new Date(emi);ven.setDate(ven.getDate()+30);
+  const num=o.invoice?o.invoice.number:"";
+  const titulo=o.invoice?"FACTURA DE VENTA N°":"CUENTA DE COBRO · PEDIDO";
+  const forma=o.payMode==="credito"?"CREDITO":"CONTADO";const medio=o.payMode==="credito"?"":"TRANSFERENCIA";
+  const lineas=o.items.map(i=>{const col=colorById(i.colorId);const nombre=((i.size||"")+" — "+(col?col.name:(i.name||i.colorId||""))).toUpperCase();return [i.qty,nombre,i.unit,i.qty*i.unit];});
+  if(t.caja)lineas.push([o.items.length,"CAJAS",Math.round(t.caja/Math.max(1,o.items.length)),t.caja]);
+  if(t.recargo)lineas.push([1,"RECARGO CAJAS CON MENOS DE 20 TALLOS",t.recargo,t.recargo]);
+  if(t.conserv)lineas.push([1,"CONSERVANTE",t.conserv,t.conserv]);
+  const td='style="border:1px solid #888;padding:6px 8px;font-size:12px"';const tdr='style="border:1px solid #888;padding:6px 8px;font-size:12px;text-align:right"';const th='style="border:1px solid #888;padding:6px 8px;font-size:11px;background:#eee;text-align:left"';
+  const fila=(k,v,bold)=>`<tr><td ${th}>${k}</td><td ${tdr}><span style="font-size:${bold?"15px":"13px"};font-weight:${bold?"700":"400"}">${v}</span></td></tr>`;
+  const obs=[`Pedido ${esc(o.number)} · despacho solicitado: ${esc(dispatchText(o))}`,o.dispatch&&o.dispatch.guide&&o.dispatch.guide!=="Pendiente"?`Guía Coordinadora: ${esc(o.dispatch.guide)}`:"",o.notes?esc(o.notes):""].filter(Boolean).join(" · ");
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${o.invoice?"Factura "+esc(num):"Cuenta de cobro "+esc(o.number)} - ${esc(b.name||c.name||"")}</title>
+<style>@page{size:letter;margin:14mm}body{font-family:"Courier New",Courier,monospace;color:#111;margin:0}table{border-collapse:collapse}.serif{font-family:Georgia,"Times New Roman",serif}@media print{.np{display:none}}</style></head><body>
+<div class="np" style="font-family:Arial;background:#F3EFE6;padding:10px 14px;margin-bottom:14px;border-radius:8px;font-size:13px">Para guardar como PDF: <b>Imprimir (Ctrl+P / ⌘P) → Destino: Guardar como PDF</b>. <button onclick="window.print()" style="padding:6px 12px;font-weight:700;cursor:pointer">🖨 Imprimir / Guardar PDF</button></div>
+<table style="width:100%"><tr><td style="vertical-align:top;width:60%"><div class="serif" style="font-size:34px;letter-spacing:1px">D<span style="font-size:26px">ANIEL</span> P<span style="font-size:26px">IEDRAHITA</span></div><div style="font-size:14px;font-weight:700;margin-top:4px">NIT: &nbsp; 70.555.275</div></td>
+<td style="vertical-align:top"><table style="width:100%">
+${fila(titulo,o.invoice?`<b style="color:#1a56c4;font-size:20px">${esc(num)}</b>`:`<b style="font-size:16px">${esc(o.number)}</b>`)}
+${fila("FECHA EMISIÓN",`<b style="color:#c22">${fechaCorta(emi.toISOString())}</b>`)}
+${fila("FECHA VENCIMIENTO",`<b>${fechaCorta(ven.toISOString())}</b>`)}
+${fila("FORMA DE PAGO",forma)}${fila("MEDIO DE PAGO",medio||"&nbsp;")}
+</table></td></tr></table>
+<table style="width:100%;margin-top:14px"><tr><td ${th} style="width:9%">CLIENTE</td><td ${td} style="width:30%">${esc((b.name||c.name||"").toUpperCase())}</td><td ${th} style="width:7%">NIT</td><td ${td}>${esc(b.doc||c.doc||"")}</td><td ${th} style="width:9%">E-MAIL</td><td ${td}>${esc(b.email||c.email||"")}</td></tr>
+<tr><td ${th}>DIRECCIÓN</td><td ${td}>${esc([b.address||s.address,b.city||s.city].filter(Boolean).join(", "))}</td><td ${th}>TELÉFONO</td><td ${td}>${esc(c.phone||"")}</td><td ${th}>CONTACTO</td><td ${td}>${esc(c.contact||"")}</td></tr></table>
+<table style="width:100%;margin-top:14px"><thead><tr><th ${th}>CANTIDAD</th><th ${th}>DESCRIPCION</th><th ${th} style="text-align:right">VR UNITARIO</th><th ${th} style="text-align:right">SUBTOTAL</th><th ${th} style="text-align:right">DESCUENTO</th><th ${th} style="text-align:right">IVA %</th><th ${th} style="text-align:right">VR IVA</th><th ${th} style="text-align:right">VR TOTAL</th></tr></thead>
+<tbody>${lineas.map(l=>`<tr><td ${tdr}>${l[0]}</td><td ${td}>${esc(l[1])}</td><td ${tdr}>${money(l[2])}</td><td ${tdr}>${money(l[3])}</td><td ${tdr}></td><td ${tdr}></td><td ${tdr}></td><td ${tdr}>${money(l[3])}</td></tr>`).join("")}</tbody></table>
+<table style="width:100%;margin-top:18px"><tr><td style="vertical-align:top;width:60%;padding-right:20px">
+<div style="font-weight:700;font-size:15px;margin-top:30px">VALOR EN LETRAS</div><div style="font-size:12px;margin-top:4px">${numLetras(t.total)}</div>
+<div style="font-weight:700;font-size:15px;margin-top:18px">OBSERVACIONES</div><div style="font-size:12px;margin-top:4px">${obs}</div>
+${(o.abonos||[]).length?`<div style="font-weight:700;font-size:13px;margin-top:18px">ABONOS</div><div style="font-size:12px">${o.abonos.map(a=>fechaCorta(a.at)+" · "+money(a.valor)).join("<br>")}</div>`:""}
+</td><td style="vertical-align:top"><table style="width:100%">
+${fila("SUB TOTAL",money(t.sub+t.recargo+t.conserv+t.caja),true)}${fila('<span style="color:#c22">DESCUENTO</span>',t.descuento?money(t.descuento):"")}${fila("VALOR BASE",money(t.sub+t.recargo+t.conserv+t.caja-t.descuento))}${fila("IVA","")}${fila("TRANSPORTE",t.transporte?money(t.transporte):"")}${fila("RETENCIONES","")}${fila("TOTAL A PAGAR",money(t.total),true)}
+${(o.abonos||[]).length?fila("TOTAL ABONOS",money(t.abonado))+fila("SALDO A PAGAR",money(t.saldo),true):""}
+</table></td></tr></table>
+</body></html>`;
+}
+function abrirFacturaPDF(oid){
+  const o=DB.orders.find(x=>x.id===oid);if(!o)return;
+  const w=window.open("","_blank");if(!w){toast("El navegador bloqueó la ventana: permite ventanas emergentes para este sitio",true);return;}
+  w.document.open();w.document.write(facturaHTML(o));w.document.close();
+  setTimeout(()=>{try{w.focus();w.print();}catch(_){}},600);
+}
 /* ---------- Facturación ---------- */
 function adFact(){
   const pend=DB.orders.filter(o=>o.state==="Pendiente de facturación");
@@ -2345,12 +2405,12 @@ function adFact(){
         <div class="field" style="margin:0"><label>Descuento ($)</label><input type="number" min="0" step="1000" placeholder="0" data-fact-disc="${o.id}" style="width:110px;text-align:right"></div>
         <div class="field" style="margin:0"><label>Transporte cobrado ($)</label><input type="number" min="0" step="1000" placeholder="0" value="${o.charges&&o.charges.transporte?o.charges.transporte:""}" data-fact-trans="${o.id}" style="width:120px;text-align:right"></div>
       </div>
-      <div class="action-row" style="margin:12px 0 0"><button class="btn btn-primary btn-sm" data-fact-ok="${o.id}">✓ Marcar facturado</button><button class="btn btn-soft btn-sm" data-export-fact-one="${o.id}">⬇ Exportar este pedido</button><button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver pedido</button></div>
+      <div class="action-row" style="margin:12px 0 0"><button class="btn btn-primary btn-sm" data-fact-ok="${o.id}">✓ Marcar facturado</button><button class="btn btn-soft btn-sm" data-export-fact-one="${o.id}">⬇ Exportar este pedido</button><button class="btn btn-soft btn-sm" data-factura-pdf="${o.id}">📄 Cuenta de cobro PDF (sin número)</button><button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver pedido</button></div>
     </div>`;}).join("")}</div>`:`<div class="card card-pad" style="color:var(--ink-soft)"><b>No hay pedidos pendientes de facturar.</b><br><span style="font-size:14px">Aquí aparecen los pedidos cuando registras el pago recibido o confirmas un pedido a crédito.</span></div>`}
   <h3 class="serif" style="font-size:21px;color:var(--forest);margin:30px 0 10px">Facturas registradas (${done.length})</h3>
   <div class="card"><div class="tbl-scroll"><table class="tbl">
-    <thead><tr><th>Factura</th><th>Fecha</th><th>Pedido</th><th>Cliente</th><th class="num">Valor</th><th class="num">Descuento</th><th>Origen</th></tr></thead>
-    <tbody>${done.slice(0,15).map(o=>`<tr data-open-order="${o.id}" style="cursor:pointer"><td><b>${o.invoice.number}</b></td><td>${fdate(o.invoice.at)}</td><td>${o.number}</td><td>${esc(o.billing.name)}</td><td class="num">${money(orderTotals(o).total)}</td><td class="num">${o.discount?money(o.discount):"—"}</td><td><small>${esc(o.invoice.externalId)}</small></td></tr>`).join("")}</tbody>
+    <thead><tr><th>Factura</th><th>Fecha</th><th>Pedido</th><th>Cliente</th><th class="num">Valor</th><th class="num">Descuento</th><th>Origen</th><th></th></tr></thead>
+    <tbody>${done.slice(0,15).map(o=>`<tr data-open-order="${o.id}" style="cursor:pointer"><td><b>${o.invoice.number}</b></td><td>${fdate(o.invoice.at)}</td><td>${o.number}</td><td>${esc(o.billing.name)}</td><td class="num">${money(orderTotals(o).total)}</td><td class="num">${o.discount?money(o.discount):"—"}</td><td><small>${esc(o.invoice.externalId)}</small></td><td><button class="btn btn-primary btn-sm" data-factura-pdf="${o.id}">🧾 Factura PDF</button></td></tr>`).join("")}</tbody>
   </table></div></div>`;
 }
 
@@ -2797,7 +2857,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-factura-pdf],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2897,6 +2957,7 @@ document.addEventListener("click",async e=>{
   if(d.gotoDesp!==undefined){DB.admin.section="desp";DB.ui.drawer=null;render();return;}
   if(d.gotoFact!==undefined){DB.admin.section="fact";DB.ui.drawer=null;render();return;}
   if(d.exportFactOne!==undefined){exportFact(d.exportFactOne);return;}
+  if(d.facturaPdf!==undefined){abrirFacturaPDF(d.facturaPdf);return;}
   if(d.notifX!==undefined){DB.admin.notifications.shift();render();return;}
   if(d.notifOpen!==undefined){const o=DB.orders.find(x=>x.number===d.notifOpen);DB.admin.section="pedidos";DB.ui.drawer=o?o.id:null;DB.admin.notifications.shift();render();return;}
   if(d.confirmAvail!==undefined){
