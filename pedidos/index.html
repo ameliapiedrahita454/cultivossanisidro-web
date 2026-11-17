@@ -872,7 +872,7 @@ function genColors(){
     const base=hexFor(fam);
     [["light"," light",.55],["normal","",.18],["dark"," dark",-.22]].forEach(v=>{
       n++;
-      let avail="disponible"; if(n%23===0)avail="agotado"; else if(n%11===0)avail="pocas";
+      const avail="disponible";
       const process=v[0]==="light"?"claro":"fuerte";
       out.push({id:"c"+n,code:"T-"+String(n).padStart(3,"0"),name:"T. "+fam+v[1],
         cat:"ton",group:fam,tone:[shade(base,Math.min(.9,v[2]+.35)),shade(base,v[2])],
@@ -885,7 +885,7 @@ function genColors(){
     vars.forEach((v,i)=>{
       n++;
       const base=hexFor(v)||hexFor(gname);
-      let avail="disponible"; if(n%23===0)avail="agotado"; else if(n%11===0)avail="pocas";
+      const avail="disponible";
       out.push({id:"c"+n,code:pre+(i+1),name:gname+" "+cap(v),
         cat:"tec",group:gname,tone:[shade(base,.5),shade(base,-.05)],
         avail,active:true,process:"fuerte",
@@ -920,7 +920,7 @@ function isCreditClient(name){
 const AUTH_SALT="sanisidro-2026";
 const USERS={"lorenza": {"name": "Lorenza Piedrahita", "role": "admin", "h": "f561c589add698a472c0876eeacd234c9817e4ead1956f5fe9c76aafc5a77843"}, "amelia": {"name": "Amelia Piedrahita", "role": "admin", "h": "c12042b1026e5782821faaf313de7f2b12aacf31a2236eacb8aebd2a3f0230e0"}, "sandra": {"name": "Sandra Ríos", "role": "ventas", "h": "4dbae11f5ba60deb3db8eab8305ccb0308ba0b872151cca81329cffe9b68e3f4"}, "facturacion": {"name": "Facturación", "role": "fact", "h": "19709ca18349ecd32b1f5555f0bf14bf258233c35d403c6deb7359e4ebbb03e3"}, "sala": {"name": "Sala de preparación", "role": "sala", "h": "20bfcf06bb6d97d4c59b9a9c3a2c66dc0d1db83974e8095b04dbfd9ec489a7d9"}, "despacho": {"name": "Despacho", "role": "desp", "h": "94e67cdef0240a40173ea08ac0ebdcb1527afa007141253141fd54b62bf2a3b6"}};
 /* Todos los usuarios ven todas las secciones del panel. */
-const ALL_SECTIONS=["dash","guia","mes","pedidos","pend","fact","sala","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
+const ALL_SECTIONS=["dash","guia","mes","pedidos","pend","fact","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
 const ROLES = {
   admin:{name:"Administrador",sections:ALL_SECTIONS},
   ventas:{name:"Ventas",sections:ALL_SECTIONS},
@@ -989,6 +989,35 @@ function despachoHint(){
     return "Pide ahora y despachamos el lunes a primera hora";
   }catch(_){ return "Pedidos antes de las 10:00 a. m. se despachan el mismo día"; }
 }
+/* ---------- Días hábiles y festivos de Colombia (Ley 51 de 1983) ---------- */
+function easterDate(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return new Date(y,mo-1,da);}
+const isoLocal=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const _holCache={};
+function colHolidays(y){
+  if(_holCache[y])return _holCache[y];
+  const s=new Set();const add=d=>s.add(isoLocal(d));
+  const nextMon=d=>{const x=new Date(d);while(x.getDay()!==1)x.setDate(x.getDate()+1);return x;};
+  [[1,1],[5,1],[7,20],[8,7],[12,8],[12,25]].forEach(([m,d])=>add(new Date(y,m-1,d)));
+  [[1,6],[3,19],[6,29],[8,15],[10,12],[11,1],[11,11]].forEach(([m,d])=>add(nextMon(new Date(y,m-1,d))));
+  const e=easterDate(y);const off=(n,mon)=>{const x=new Date(e);x.setDate(x.getDate()+n);add(mon?nextMon(x):x);};
+  off(-3);off(-2);off(39,true);off(60,true);off(68,true);
+  _holCache[y]=s;return s;
+}
+function parseISODay(s){const[y,m,d]=String(s||"").split("-").map(Number);if(!y||!m||!d)return null;return new Date(y,m-1,d);}
+function isBusinessDay(d){const w=d.getDay();return w>=1&&w<=5&&!colHolidays(d.getFullYear()).has(isoLocal(d));}
+function bogotaNow(){try{return new Date(new Date().toLocaleString("en-US",{timeZone:"America/Bogota"}));}catch(_){return new Date();}}
+function minDispatchDate(){
+  const now=bogotaNow();const d=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(!(now.getHours()<10&&isBusinessDay(d)))d.setDate(d.getDate()+1);
+  while(!isBusinessDay(d))d.setDate(d.getDate()+1);
+  return isoLocal(d);
+}
+function validDispatchDate(s){const d=parseISODay(s);return !!d&&isBusinessDay(d)&&s>=minDispatchDate();}
+function fmtDia(s){const d=parseISODay(s);if(!d)return "";const t=d.toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"}).replace(",","");return t.charAt(0).toUpperCase()+t.slice(1);}
+function dispatchText(o){const f=o.shipping&&o.shipping.dispatchDate;if(f)return fmtDia(f);return o.dispatchRule&&o.dispatchRule.sameDay?"Mismo día (regla anterior)":"Día siguiente hábil (regla anterior)";}
+function clientStateLabel(estado,guia){const g=guia&&guia!=="Pendiente"&&guia!=="Por asignar"?guia:null;
+  return {"Pedido recibido":"Revisando disponibilidad","Pago por verificar":"Disponibilidad confirmada · esperando tu pago","Pago confirmado":"Pago recibido · en preparación","Pendiente de facturación":"Pago recibido · en preparación","Facturado":"Facturado · en preparación","En preparación":"En preparación","Listo para despacho":"Listo para despacho","Despachado":"Despachado"+(g?" · guía "+g:""),"En tránsito":"En camino"+(g?" · guía "+g:""),"Entregado":"Entregado","Cancelado":"Cancelado"}[estado]||estado;}
+function clientState(o){return clientStateLabel(o.state,o.dispatch&&o.dispatch.guide);}
 function estimateDispatch(iso){
   const d=new Date(iso);
   const sameDay=d.getHours()<10;
@@ -1020,13 +1049,8 @@ function createOrder(opts){
     dispatchRule:estimateDispatch(createdAt)
   };
   o._seedClock=()=>{clockMin+=20+((DB.seq*13)%50);const d=new Date(createdAt);d.setMinutes(d.getMinutes()+clockMin);return d.toISOString();};
-  pushHistory(o,"Pedido creado por el cliente","Cliente");
-  o.state="Pago por verificar";
-  if(o.payMode==="credito"){
-    pushHistory(o,"Pedido a crédito — pendiente de aprobación (cliente con crédito autorizado)","Sistema");
-  } else {
-    pushHistory(o,"Comprobante de pago cargado","Cliente");
-  }
+  pushHistory(o,"Pedido creado por el cliente — despacho solicitado: "+dispatchText(o),"Cliente");
+  pushHistory(o,o.payMode==="credito"?"Pedido a crédito — pendiente de confirmar disponibilidad":"Pendiente de confirmar disponibilidad; el cliente paga después de la confirmación","Sistema");
   // Cliente: asociar o crear
   let cl=DB.clients.find(c=>c.email===opts.client.email);
   if(!cl){cl={id:"cl"+(DB.clients.length+1),...opts.client,createdAt};DB.clients.push(cl);}
@@ -1165,6 +1189,34 @@ async function sbSaveOrder(o){
     headers:sbHeaders(true),body:JSON.stringify({estado:o.state,datos:slimOrder(o)})});
   if(r.ok) o._dirty=false;
 }
+/* ---------- Catálogo (disponibilidad, estado y precios) guardado en la base de datos ---------- */
+function stdPrices(c){return c.group==="Foliage"?{"Follaje":FOLLAJE_PRICE}:Object.fromEntries(SIZES.map(s=>[s,PRICE_TABLE[s][c.process||"fuerte"]]));}
+function applyPriceTableToColors(){DB.colors.forEach(c=>{if(!c._customPrices)c.prices=stdPrices(c);});}
+async function sbLoadCatalogo(){
+  try{
+    const r=await fetch(SB_URL+"/rest/v1/catalogo?select=id,datos",{headers:sbHeaders(false)});
+    if(!r.ok)return;
+    const rows=await r.json();
+    const precios=rows.find(x=>x.id==="_precios");
+    if(precios&&precios.datos){const p=precios.datos;if(p.PRICE_TABLE)SIZES.forEach(s=>{if(p.PRICE_TABLE[s])Object.assign(PRICE_TABLE[s],p.PRICE_TABLE[s]);});if(p.FOLLAJE_PRICE)FOLLAJE_PRICE=+p.FOLLAJE_PRICE;}
+    applyPriceTableToColors();
+    rows.filter(x=>x.id!=="_precios"&&x.datos).forEach(x=>{
+      const d=x.datos;let c=colorById(x.id);
+      if(!c){c={id:x.id,code:"",name:"",cat:"ton",group:"Otros",tone:["#EEEEEE","#DDDDDD"],avail:"disponible",active:true,process:"fuerte",prices:{}};DB.colors.push(c);}
+      ["name","code","cat","group","tone","avail","active","process"].forEach(k=>{if(d[k]!==undefined)c[k]=d[k];});
+      if(d.customPrices&&d.prices){c.prices=d.prices;c._customPrices=true;}else{c._customPrices=false;c.prices=stdPrices(c);}
+    });
+    DB.ui.catalogoOk=true;
+  }catch(_){}
+}
+async function sbSaveCatalogo(id,datos){
+  if(!(await sbEnsure())){toast("Tu sesión venció: cierra sesión y vuelve a entrar para guardar",true);return false;}
+  const r=await fetch(SB_URL+"/rest/v1/catalogo?on_conflict=id",{method:"POST",headers:{...sbHeaders(true),"Prefer":"resolution=merge-duplicates"},body:JSON.stringify({id,datos,updated_at:new Date().toISOString()})});
+  if(!r.ok){toast("No se pudo guardar en la base de datos ("+r.status+")",true);return false;}
+  return true;
+}
+function colorDatos(c){const custom=JSON.stringify(c.prices||{})!==JSON.stringify(stdPrices(c));c._customPrices=custom;return {name:c.name,code:c.code,cat:c.cat,group:c.group,tone:c.tone,avail:c.avail,active:c.active,process:c.process||"fuerte",prices:c.prices,customPrices:custom};}
+async function guardarColor(c,msg){const ok=await sbSaveCatalogo(c.id,colorDatos(c));if(ok)toast(msg+" — guardado en la base de datos");}
 let _sbKnown=new Set();
 async function sbFetchOrders(notify){
   if(!(await sbEnsure())) return;
@@ -1230,8 +1282,19 @@ setInterval(()=>{if(DB.admin.user){sbFetchOrders(true).catch(()=>{});sbFetchLead
 function waOrderMsg(o){
   const t=orderTotals(o);
   const lines=o.items.map(i=>{const c=colorById(i.colorId);return `• ${c?c.name:i.colorId} — ${i.size} × ${i.qty}`;}).join("\n");
-  return `Hola San Isidro 🌸 Acabo de hacer el pedido ${o.number} en cultivosanisidro.com/pedidos\n\nCliente: ${o.client.name}\nCiudad: ${o.shipping.city}\n${lines}\n\nTotal: ${money(t.total)}${o.payMode==="credito"?" (crédito)":" — envío comprobante de pago"}`;
+  return `Hola San Isidro 🌸 Acabo de hacer el pedido ${o.number} en cultivosanisidro.com/pedidos\n\nCliente: ${o.client.name}\nCiudad: ${o.shipping.city}\nDespacho: ${dispatchText(o)}\n${lines}\n\nTotal: ${money(t.total)}${o.payMode==="credito"?" (crédito)":""}\n\nQuedo pendiente de la confirmación de disponibilidad${o.payMode==="credito"?"":" para hacer el pago"}.`;
 }
+/* ---------- Mensajes de WhatsApp que arma el panel para el cliente ---------- */
+function waPhone(o){let p=String((o.client&&(o.client.wa||o.client.phone))||"").replace(/\D/g,"");if(p.length===10)p="57"+p;return p;}
+function adminName(){return ((USERS[DB.admin.user]||{}).name||DB.admin.user||"Ventas").split(" ")[0];}
+function waLines(o){return o.items.map(i=>{const c=colorById(i.colorId);return `• ${c?c.name:(i.name||i.colorId)} — ${i.size} × ${i.qty}`;}).join("\n");}
+function waConfirmMsg(o){const t=orderTotals(o);
+  return `Hola ${o.client.contact||o.client.name} 🌸 Soy ${adminName()} de Cultivo San Isidro. Confirmamos la disponibilidad de tu pedido ${o.number}:\n${waLines(o)}\n\nTotal: ${money(t.total)}\nDespacho: ${dispatchText(o)} (Coordinadora, flete contraentrega)\n\n`+(o.payMode==="credito"?`Queda registrado a crédito según tu acuerdo comercial. ¡Gracias!`:`Para continuar, transfiere ${money(t.total)} a Bancolombia Ahorros 02368539395 (Daniel Piedrahita, C.C. 70.555.275) y envíanos el comprobante por este chat. ¡Gracias!`);}
+function waProposeMsg(o){
+  return `Hola ${o.client.contact||o.client.name} 🌸 Soy ${adminName()} de Cultivo San Isidro. Revisamos tu pedido ${o.number}:\n${waLines(o)}\n\nNo tenemos disponible: [escribe aquí el color o grado]\nTe podemos enviar: [escribe aquí la alternativa]\n\n¿Te sirve así? Si confirmas, ajustamos el pedido y te enviamos los datos para el pago.`;}
+function waRecordatorioMsg(o){return `Hola ${o.client.contact||o.client.name} 🌸 ¿Pudiste hacer la transferencia del pedido ${o.number}? Envíanos el comprobante por aquí para facturar y preparar tus flores. ¡Gracias!`;}
+function waLink(o,msg){return "https://wa.me/"+waPhone(o)+"?text="+encodeURIComponent(msg);}
+function proposePanel(o){return `<div class="card card-pad" style="margin-bottom:14px;border-left:4px solid var(--gold)"><b>✎ Proponer un cambio al cliente</b><p style="font-size:13.5px;color:var(--ink-soft);margin:6px 0 10px">Edita el mensaje (qué no hay y qué le puedes enviar) y ábrelo en WhatsApp. Cuando el cliente acepte, usa <b>«✏️ Editar pedido»</b> para ajustarlo y luego <b>«✓ Confirmar disponibilidad»</b>.</p><textarea id="proposeMsg" rows="9" style="width:100%;font-size:14px;line-height:1.5">${esc(waProposeMsg(o))}</textarea><div class="action-row" style="margin:10px 0 0"><button class="btn btn-primary" data-propose-send="${o.id}">💬 Abrir WhatsApp con este mensaje</button><button class="btn btn-soft" data-propose-close>Cerrar</button></div></div>`;}
 /* ---------- Aviso de pedido nuevo al equipo (correo a ventas@) ---------- */
 const NOTIFY_EMAIL="ventas@cultivossanisidro.com";
 async function notifyNewOrder(o){
@@ -1253,7 +1316,8 @@ async function notifyNewOrder(o){
     productos:o.items.map(i=>{const col=colorById(i.colorId);return `${col?col.name:i.colorId} — ${i.size} × ${i.qty}`;}).join(" | "),
     tallos:String(t.stems),
     total:money(t.total),
-    forma_pago:o.payMode==="credito"?"Crédito (pendiente de aprobación)":"Transferencia — comprobante adjunto",
+    forma_pago:o.payMode==="credito"?"Crédito (confirmar disponibilidad)":"Transferencia — paga después de confirmar disponibilidad",
+    despacho:dispatchText(o),
     comprobante_nota:o.receipt?(o.receipt.dataUrl?"Adjunto a este aviso y visible en el panel":"Muy pesado para adjuntar — pedirlo por WhatsApp"):"No aplica (crédito)",
     panel:location.origin+location.pathname+"#/admin"
   };
@@ -1482,7 +1546,7 @@ function colorCard(c){
 
 /* ---------- Página PEDIR FLORES (asistente de 5 pasos) ---------- */
 function stepsBar(cur){
-  const labels=["Flores","Pedido","Datos","Pago","Confirmación"];
+  const labels=["Flores","Pedido","Datos","Confirmación"];
   return `<div class="steps" role="list">${labels.map((l,i)=>{
     const n=i+1;const cls=n<cur?"done":n===cur?"current":"";
     return `<div class="step ${cls}" role="listitem"><span class="n">${n<cur?"✓":n}</span><span class="lbl">${l}</span></div>`;
@@ -1494,8 +1558,7 @@ function viewPedir(){
   if(step===1) body=viewCatalog();
   else if(step===2) body=viewCart();
   else if(step===3) body=viewDatos();
-  else if(step===4) body=viewPago();
-  else if(step===5) body=viewConfirm();
+  else if(step>=4) body=viewConfirm();
   return `<div class="wrap" style="padding-top:34px">
     <div class="eyebrow">Pedidos de flor nacional</div>
     <h2 style="font-size:clamp(28px,4vw,38px)">Haz tu pedido</h2>
@@ -1685,6 +1748,7 @@ function viewDatos(){
   <fieldset class="fs"><legend>Datos de envío</legend>
     <p class="fs-sub">Los tiempos de entrega varían según la ciudad de destino. <a href="#/tiempos">Ver tiempos por ciudad</a>.</p>
     <div class="form-grid">
+      <div class="field full" data-f="s_date"><label for="s_date">¿Qué día quieres que despachemos tus flores? <span class="req">*</span></label><input id="s_date" type="date" required min="${minDispatchDate()}" value="${esc(sh.dispatchDate&&validDispatchDate(sh.dispatchDate)?sh.dispatchDate:minDispatchDate())}"><span class="err">Elige un día hábil: de lunes a viernes y que no sea festivo</span><p class="fs-sub" style="margin:6px 0 0">Despachamos de <b>lunes a viernes</b> (no festivos). Lo más pronto: <b>${fmtDia(minDispatchDate())}</b>${minDispatchDate()===isoLocal(bogotaNow())?" (pedidos antes de las 10:00 a. m. salen hoy)":""}. La transportadora entrega según tu ciudad.</p></div>
       ${fld("s_city","Ciudad",1,{value:sh.city})}
       ${fld("s_dept","Departamento",1,{value:sh.dept})}
       ${fld("s_addr","Dirección",1,{value:sh.address,full:1})}
@@ -1714,67 +1778,9 @@ function viewDatos(){
   <p class="fs-sub" style="margin:4px 0 0">Al continuar autorizas a Cultivo San Isidro a usar estos datos para gestionar tu pedido y contactarte sobre él (Ley 1581 de 2012).</p>
   <div class="action-row" style="justify-content:space-between">
     <button type="button" class="btn btn-ghost" data-step="2">← Volver al pedido</button>
-    <button type="submit" class="btn btn-primary btn-lg">Continuar al pago →</button>
+    <button type="submit" class="btn btn-primary btn-lg">Enviar pedido →</button>
   </div>
   </form>`;
-}
-
-/* ---------- Paso 4: pago ---------- */
-function viewPago(){
-  const t=cartTotals(); const r=DB.session.receipt;
-  const esCredito=isCreditClient(DB.session.customer?.name);
-  const modo=DB.session.payMode||(esCredito?"credito":"transferencia");
-  DB.session.payMode=esCredito?modo:"transferencia";
-  return `
-  <h3 class="serif" style="font-size:26px;color:var(--forest);margin-bottom:6px">Realiza tu pago</h3>
-  ${esCredito?`
-  <div class="note green" style="max-width:720px">✓ <b>${esc(DB.session.customer.name)}</b> es un cliente con <b>crédito autorizado</b>. Puedes confirmar tu pedido a crédito sin subir comprobante, o pagar ahora por transferencia.</div>
-  <div class="radio-cards" style="max-width:720px;margin-bottom:20px">
-    <label class="radio-card ${modo==="credito"?"on":""}"><input type="radio" name="payMode" value="credito" ${modo==="credito"?"checked":""}> <span><b>Pedido a crédito</b><br><small style="color:var(--ink-faint)">Sin comprobante · pago según acuerdo comercial</small></span></label>
-    <label class="radio-card ${modo==="transferencia"?"on":""}"><input type="radio" name="payMode" value="transferencia" ${modo==="transferencia"?"checked":""}> <span><b>Pagar ahora</b><br><small style="color:var(--ink-faint)">Transferencia + comprobante</small></span></label>
-  </div>`:""}
-  ${modo==="credito"?`
-  <div class="card card-pad" style="max-width:720px">
-    <h4 style="font-family:var(--serif);font-size:20px;color:var(--forest);margin-bottom:8px">Resumen del pedido a crédito</h4>
-    <p style="font-size:15px">Total: <b style="color:var(--forest);font-size:18px">${money(t.total)}</b> · ${t.stems} tallos</p>
-    <p style="font-size:13.5px;color:var(--ink-faint);margin-top:8px">Tu pedido quedará <b>pendiente de aprobación</b> por nuestro equipo (sin necesidad de comprobante). Una vez aprobado, el valor se registra en tu cartera y el pedido pasa a preparación; el pago queda según el acuerdo comercial. El transporte se paga contraentrega a Coordinadora.</p>
-  </div>
-  <div class="action-row" style="justify-content:space-between;margin-top:24px">
-    <button class="btn btn-ghost" data-step="3">← Volver a los datos</button>
-    <button class="btn btn-primary btn-lg" data-submit-order>Enviar pedido a crédito</button>
-  </div>`:`
-  <p style="color:var(--ink-soft);max-width:620px">Consigna o transfiere el valor total de tu pedido y sube el comprobante. Nuestro equipo verificará la recepción del dinero antes de preparar tus flores.</p>`}
-  ${modo==="credito"?"":`
-  <div class="grid-2" style="margin-top:22px;align-items:start">
-    <div class="card card-pad">
-      <h4 style="font-family:var(--serif);font-size:20px;color:var(--forest);margin-bottom:12px">Datos para el pago</h4>
-      <table class="tbl" style="font-size:14.5px">
-        <tr><td>Banco</td><td><b>Bancolombia</b></td></tr>
-        <tr><td>Tipo de cuenta</td><td><b>Ahorros</b></td></tr>
-        <tr><td>Número</td><td><b style="font-size:16px;letter-spacing:.04em">02368539395</b></td></tr>
-        <tr><td>Titular</td><td><b>Daniel Piedrahita</b></td></tr>
-        <tr><td>Cédula</td><td><b>70.555.275</b></td></tr>
-        <tr><td>Valor a pagar</td><td><b style="font-size:17px;color:var(--forest)">${money(t.total)}</b></td></tr>
-      </table>
-      <p style="font-size:13px;color:var(--ink-faint);margin-top:10px">El transporte se paga contraentrega a Coordinadora Mercantil.</p>
-      <div class="trust-pay">✓ Empresa legalmente constituida (NIT 811.023.222) · más de 30 años cultivando hortensias en La Ceja, Antioquia · <a href="#/como-funciona" style="font-weight:700;color:inherit;text-decoration:underline">¿dudas sobre el pago? Ver preguntas frecuentes</a></div>
-    </div>
-    <div>
-      <div class="upload-zone ${r?"has-file":""}" id="uploadZone" role="button" tabindex="0" aria-label="Subir comprobante de pago">
-        <div class="big">${r?"✓":"+"}</div>
-        <b>${r?"Comprobante cargado":"Subir comprobante de pago"}</b>
-        <p style="font-size:13.5px;color:var(--ink-faint);margin-top:6px">JPG, PNG o PDF</p>
-        ${r?`<span class="file-chip">${esc(r.name)} <button class="btn btn-danger btn-sm" data-rm-receipt type="button">Quitar</button></span>`:""}
-        ${r&&r.dataUrl&&r.type.startsWith("image")?`<img class="upload-preview" src="${r.dataUrl}" alt="Vista previa del comprobante">`:""}
-        <input type="file" id="receiptInput" accept=".jpg,.jpeg,.png,.pdf" hidden>
-      </div>
-      <p class="note" style="margin-top:16px"><b>Importante:</b> subir el comprobante no confirma tu pedido. Quedará en estado <span class="badge st-verificar">Pago por verificar</span> hasta que comprobemos el ingreso del dinero.</p>
-    </div>
-  </div>
-  <div class="action-row" style="justify-content:space-between;margin-top:24px">
-    <button class="btn btn-ghost" data-step="3">← Volver a los datos</button>
-    <button class="btn btn-primary btn-lg" data-submit-order ${r?"":"disabled"}>Enviar pedido ${r?"":"(sube el comprobante primero)"}</button>
-  </div>`}`;
 }
 
 /* ---------- Paso 5: confirmación ---------- */
@@ -1782,17 +1788,17 @@ function viewConfirm(){
   const o=DB.ui.lastOrder;
   if(!o) return `<div class="card card-pad">No hay un pedido reciente. <button class="btn btn-primary btn-sm" data-step="1">Hacer un pedido</button></div>`;
   const t=orderTotals(o);
+  const tel=o.client.wa||o.client.phone||"";
   return `
   <div class="confirm-hero">
     <div class="okmark">✓</div>
     <h3 class="serif" style="font-size:32px;color:var(--forest)">¡Recibimos tu pedido!</h3>
     <p style="color:var(--ink-faint);margin-top:8px;letter-spacing:.12em;text-transform:uppercase;font-size:12px">Número de pedido</p>
     <div class="order-no">${o.number}</div>
+    <span class="badge st-recibido" style="font-size:13px">Revisando disponibilidad</span>
     ${o.payMode==="credito"
-      ?`<span class="badge st-verificar" style="font-size:13px">Pendiente de aprobación · Crédito</span>
-    <p class="lead" style="margin:22px auto 0;max-width:560px">Recibimos tu pedido <b>a crédito</b>. Nuestro equipo lo revisará y aprobará para iniciar la preparación; el pago queda pendiente según el acuerdo comercial.</p>`
-      :`<span class="badge st-verificar" style="font-size:13px">Pago por verificar</span>
-    <p class="lead" style="margin:22px auto 0;max-width:560px">Recibimos correctamente tu pedido y el comprobante de pago. Nuestro equipo verificará la recepción del dinero y, una vez confirmado, procederemos con la preparación y despacho de tus flores.</p>`}
+      ?`<p class="lead" style="margin:22px auto 0;max-width:600px">Nuestro equipo revisa la disponibilidad de las flores y te <b>confirma por WhatsApp</b>${tel?` al <b>${esc(tel)}</b>`:""}. Tu pedido queda <b>a crédito</b> según tu acuerdo comercial, y pasa a facturación y preparación una vez confirmado.</p>`
+      :`<p class="lead" style="margin:22px auto 0;max-width:600px">Nuestro equipo revisa la disponibilidad de las flores y te <b>confirma por WhatsApp</b>${tel?` al <b>${esc(tel)}</b>`:""}. <b>Todavía no pagues:</b> cuando recibas la confirmación, haces la transferencia y nos envías el comprobante por WhatsApp.</p>`}
     ${o.pendingSync?`
     <div style="margin-top:22px"><a class="btn btn-primary btn-lg" target="_blank" rel="noopener" href="https://wa.me/573113676027?text=${encodeURIComponent(waOrderMsg(o))}">Enviar mi pedido por WhatsApp →</a></div>
     <p style="font-size:13.5px;color:var(--danger);margin-top:12px"><b>Importante:</b> no pudimos registrar tu pedido en nuestro sistema (¿sin internet?). Toca el botón para enviárnoslo por WhatsApp y quede en firme.</p>`
@@ -1802,14 +1808,22 @@ function viewConfirm(){
   <div class="grid-2" style="max-width:820px;margin:0 auto">
     <div class="card card-pad">
       <h4 style="font-family:var(--serif);font-size:19px;color:var(--forest);margin-bottom:10px">Tu pedido</h4>
-      ${o.items.map(i=>{const c=colorById(i.colorId);return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span> <span>${esc(c.name)} — ${i.size}</span><b style="margin-left:auto">${i.qty} tallos</b></div>`;}).join("")}
+      ${o.items.map(i=>{const c=colorById(i.colorId)||{name:i.name||i.colorId,tone:["#e4e4e4","#d6d6d6"]};return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span> <span>${esc(c.name)} — ${i.size}</span><b style="margin-left:auto">${i.qty} tallos</b></div>`;}).join("")}
       <div style="display:flex;justify-content:space-between;padding-top:12px;font-size:15px"><span>${t.stems} tallos en total</span><b style="color:var(--forest)">${money(t.total)}</b></div>
+      <p style="font-size:14px;margin-top:14px">🚚 Despacho solicitado: <b>${dispatchText(o)}</b><br><small style="color:var(--ink-faint)">Envío nacional con Coordinadora Mercantil, flete contraentrega. El tiempo de entrega depende de la ciudad (${esc(o.shipping.city)}).</small></p>
     </div>
     <div class="card card-pad">
-      <h4 style="font-family:var(--serif);font-size:19px;color:var(--forest);margin-bottom:10px">Despacho estimado</h4>
-      <p style="font-size:14.5px;color:var(--ink-soft)">Pedido recibido el <b>${fdate(o.createdAt)}</b> a las <b>${ftime(o.createdAt)}</b> — ${o.dispatchRule.sameDay?"antes":"después"} de las 10:00 a. m.</p>
-      <p style="font-size:15px;margin-top:10px">Despacho: <b>${o.dispatchRule.label}</b></p>
-      <p style="font-size:13.5px;color:var(--ink-faint);margin-top:10px">Envío nacional con Coordinadora Mercantil, flete contraentrega. El tiempo de entrega depende de la ciudad de destino (${esc(o.shipping.city)}).</p>
+      ${o.payMode==="credito"?`<h4 style="font-family:var(--serif);font-size:19px;color:var(--forest);margin-bottom:10px">Pedido a crédito</h4>
+      <p style="font-size:14.5px;color:var(--ink-soft)">El valor se registra en tu cartera según el acuerdo comercial. No necesitas enviar comprobante.</p>`
+      :`<h4 style="font-family:var(--serif);font-size:19px;color:var(--forest);margin-bottom:10px">Cómo pagar (después de la confirmación)</h4>
+      <table class="tbl" style="font-size:14px">
+        <tr><td>Banco</td><td><b>Bancolombia</b></td></tr>
+        <tr><td>Tipo de cuenta</td><td><b>Ahorros</b></td></tr>
+        <tr><td>Número</td><td><b style="font-size:16px;letter-spacing:.04em">02368539395</b></td></tr>
+        <tr><td>Titular</td><td><b>Daniel Piedrahita</b> · C.C. 70.555.275</td></tr>
+        <tr><td>Valor</td><td><b style="font-size:17px;color:var(--forest)">${money(t.total)}</b></td></tr>
+      </table>
+      <p style="font-size:13px;color:var(--ink-faint);margin-top:10px">Envía el comprobante por WhatsApp al <b>+57 311 367 6027</b> con tu número de pedido ${o.number}. El transporte se paga contraentrega a Coordinadora.</p>`}
       <div class="note blue" style="margin:16px 0 0">¿Necesitas ayuda? <a href="https://wa.me/573113676027" target="_blank" rel="noopener" style="font-weight:700">Escríbenos por WhatsApp: +57 311 367 6027</a></div>
     </div>
   </div>
@@ -1824,8 +1838,8 @@ function viewConfirm(){
 const FAQS=[
   ["¿Quién es Cultivo San Isidro?","Somos pioneros en el cultivo de hortensia blanca en Antioquia, con más de 30 años de experiencia. Cultivamos en 15 hectáreas en La Ceja y despachamos a floristerías, diseñadores y mayoristas de toda Colombia, además de exportar a más de 12 países."],
   ["¿Cuál es el pedido mínimo?","10 tallos por color. Puedes combinar tantos colores y tamaños como quieras en un mismo pedido; cada color se despacha en su propia caja."],
-  ["¿Cómo pago mi pedido y es seguro?","Pagas por transferencia a la cuenta de Cultivo San Isidro S.A.S. (NIT 811.023.222) y subes el comprobante; verificamos el ingreso del dinero antes de preparar tu pedido. Si ya eres cliente con crédito autorizado, puedes pedir sin comprobante."],
-  ["¿Cuánto tarda el envío y cuánto cuesta el transporte?","Si pides antes de las 10:00 a. m. despachamos ese mismo día; después de esa hora, al día siguiente. Viaja por Coordinadora Mercantil y el flete se paga contraentrega — el valor y el tiempo dependen de tu ciudad."],
+  ["¿Cómo pago mi pedido y es seguro?","Primero confirmamos por WhatsApp que tenemos tus flores disponibles. Luego pagas por transferencia a la cuenta de Cultivo San Isidro S.A.S. (NIT 811.023.222) y nos envías el comprobante por WhatsApp; con el pago registrado facturamos y preparamos tu pedido. Si ya eres cliente con crédito autorizado, no necesitas comprobante."],
+  ["¿Cuánto tarda el envío y cuánto cuesta el transporte?","Tú eliges el día de despacho al hacer el pedido: de lunes a viernes, sin festivos. Si pides antes de las 10:00 a. m. puede salir ese mismo día; después de esa hora, desde el siguiente día hábil. Viaja por Coordinadora Mercantil y el flete se paga contraentrega — el valor y el tiempo dependen de tu ciudad."],
   ["¿Qué colores y tamaños de hortensia manejan?","Más de 240 colores entre hortensia blanca natural y técnicas de pintado, en tamaños desde Mini Green hasta Jumbo."],
   ["¿Cuánto cuestan las hortensias por tallo?","Desde $1.000 por tallo. El precio exacto depende del color, la técnica y el tamaño que elijas — puedes verlos todos en el catálogo antes de pedir."]
 ];
@@ -1835,7 +1849,7 @@ function faqSection(){
   </div>`;
 }
 function viewComo(){
-  const pasos=[["Explora el muestrario","255 colores de hortensia con foto, código y disponibilidad."],["Arma tu pedido","Elige color, tamaño y cantidad de tallos. Agrega tantas combinaciones como necesites."],["Ingresa tus datos","Datos de contacto, envío y facturación. Quedan guardados para tu próxima compra."],["Paga y sube el comprobante","Transfiere el total y adjunta el soporte. Verificamos el ingreso del dinero."],["Confirmamos y facturamos","Con el pago confirmado generamos tu factura y el pedido pasa a preparación."],["Preparamos en sala","Nuestro equipo alista tallo por tallo exactamente lo que pediste."],["Despachamos","Entregamos a Coordinadora Mercantil y registramos tu número de guía."],["Recibes tus flores","Flete contraentrega. Te avisamos en cada paso del camino."]];
+  const pasos=[["Explora el muestrario","255 colores de hortensia con foto, código y disponibilidad."],["Arma tu pedido","Elige color, tamaño y cantidad de tallos. Agrega tantas combinaciones como necesites."],["Ingresa tus datos","Datos de contacto, envío y facturación. Quedan guardados para tu próxima compra."],["Confirmamos disponibilidad","Eliges el día de despacho (lunes a viernes) y te confirmamos por WhatsApp que tenemos tus flores."],["Pagas y nos envías el comprobante","Transfieres el total y nos mandas el soporte por WhatsApp; registramos tu pago."],["Facturamos y preparamos","Generamos tu factura y alistamos tallo por tallo exactamente lo que pediste."],["Despachamos","Entregamos a Coordinadora Mercantil y registramos tu número de guía."],["Recibes tus flores","Flete contraentrega. Te avisamos en cada paso del camino."]];
   return `<div class="wrap section">
     <div class="eyebrow">Cómo funciona</div>
     <h2>De nuestro cultivo a tu mesa de trabajo</h2>
@@ -1879,31 +1893,46 @@ function viewContacto(){
   </div>`;
 }
 
-/* ---------- Mis pedidos (portal del cliente — demo) ---------- */
+/* ---------- Mis pedidos (portal del cliente) ---------- */
+async function sbMisPedidos(contacto){
+  const r=await fetch(SB_URL+"/rest/v1/rpc/mis_pedidos",{method:"POST",headers:sbHeaders(false),body:JSON.stringify({p_contacto:contacto})});
+  if(!r.ok) throw new Error("mis "+r.status);
+  return await r.json();
+}
 function viewMisPedidos(){
-  const email=DB.session.customer?.email||null;
-  const mine=email?DB.orders.filter(o=>o.client.email===email):DB.orders.slice();
+  const ui=DB.ui;
+  if(ui.misContacto===undefined){
+    let c="";try{const p=JSON.parse(localStorage.getItem("si_perfil")||"null");c=(p&&p.customer&&(p.customer.wa||p.customer.phone||p.customer.email))||"";}catch(_){}
+    if(!c&&ui.lastOrder&&ui.lastOrder.client)c=ui.lastOrder.client.wa||ui.lastOrder.client.phone||ui.lastOrder.client.email||"";
+    ui.misContacto=c;ui.misPedidos=null;ui.misMsg="";
+    if(c)setTimeout(()=>{const b=document.querySelector("[data-mis-buscar]");if(b)b.click();},0);
+  }
   const favs=DB.session.favs;
+  const lista=ui.misPedidos;
   return `<div class="wrap section" style="padding-top:34px">
     <div class="eyebrow">Portal del cliente</div>
     <h2>Mis pedidos</h2>
-    <p class="lead">Aquí quedan los pedidos hechos desde este dispositivo. ¿Buscas uno que no aparece? Escríbenos por WhatsApp con tu número de pedido.</p>
-    ${mine.length?`
-    <div class="action-row" style="margin-top:18px">
-      <button class="btn btn-primary" data-repeat="${mine[0].id}">Repetir último pedido</button>
-      <a class="btn btn-soft" href="#/rapido">Pedido rápido</a>
+    <p class="lead">Consulta el estado de tus pedidos, el día de despacho y el número de guía de Coordinadora.</p>
+    <div class="card card-pad" style="margin-top:18px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="flex:1;min-width:220px;margin:0"><label for="misContacto">Tu celular o correo</label><input id="misContacto" type="text" value="${esc(ui.misContacto||"")}" placeholder="Ej: 3001234567 o tu@correo.com" autocomplete="tel"></div>
+        <button type="button" class="btn btn-primary" data-mis-buscar>Consultar mis pedidos</button>
+      </div>
+      <p style="font-size:13px;margin:10px 0 0;color:var(--ink-faint)">${esc(ui.misMsg||"")}</p>
     </div>
-    <div class="card" style="margin-top:10px"><div class="tbl-scroll"><table class="tbl">
-      <thead><tr><th>Pedido</th><th>Fecha</th><th>Productos</th><th class="num">Tallos</th><th class="num">Valor</th><th>Factura</th><th>Estado</th><th></th></tr></thead>
-      <tbody>${mine.map(o=>{const t=orderTotals(o);return `<tr>
-        <td style="white-space:nowrap"><b>${o.number}</b></td><td>${fdate(o.createdAt)}</td>
-        <td style="font-size:13px;max-width:230px">${o.items.map(i=>{const c=colorById(i.colorId);return esc(c.name)+" · "+i.size+" × "+i.qty;}).join("<br>")}</td>
-        <td class="num">${t.stems}</td><td class="num"><b>${money(t.total)}</b></td>
-        <td>${o.invoice?o.invoice.number:"—"}</td>
-        <td><span class="badge ${STATE_CLASS[o.state]}">${o.state}</span></td>
-        <td><button class="btn btn-soft btn-sm" data-repeat="${o.id}">Volver a pedir</button></td>
-      </tr>`;}).join("")}</tbody>
-    </table></div></div>`:`<div class="card card-pad" style="margin-top:20px">Aún no tienes pedidos. <a href="#/pedir">Haz tu primer pedido</a>.</div>`}
+    ${lista&&lista.length?`
+    <div class="card" style="margin-top:14px"><div class="tbl-scroll"><table class="tbl">
+      <thead><tr><th>Pedido</th><th>Fecha</th><th>Productos</th><th class="num">Tallos</th><th class="num">Valor</th><th>Despacho</th><th>Guía Coordinadora</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${lista.map((o,ix)=>`<tr>
+        <td style="white-space:nowrap"><b>${esc(o.numero)}</b></td><td style="white-space:nowrap">${fdate(o.created_at)}</td>
+        <td style="font-size:13px;max-width:230px">${(o.items||[]).map(i=>esc(i.name||i.colorId)+" · "+esc(i.size)+" × "+i.qty).join("<br>")}</td>
+        <td class="num">${o.tallos||""}</td><td class="num"><b>${money(o.total||0)}</b></td>
+        <td style="white-space:nowrap">${o.fecha_despacho?fmtDia(o.fecha_despacho):"—"}</td>
+        <td>${o.guia&&o.guia!=="Pendiente"&&o.guia!=="Por asignar"?`<b>${esc(o.guia)}</b><br><a href="https://www.coordinadora.com/" target="_blank" rel="noopener" style="font-size:12px">Rastrear en coordinadora.com</a>`:(["Despachado","En tránsito"].includes(o.estado)?"<small>Pendiente de asignar</small>":"—")}</td>
+        <td><span class="badge ${STATE_CLASS[o.estado]||""}">${esc(clientStateLabel(o.estado,o.guia))}</span></td>
+        <td><button class="btn btn-soft btn-sm" data-mis-repeat="${ix}">Volver a pedir</button></td>
+      </tr>`).join("")}</tbody>
+    </table></div></div>`:lista?`<div class="card card-pad" style="margin-top:14px">No encontramos pedidos con ese dato. <a href="#/pedir">Haz tu primer pedido</a> o <a href="https://wa.me/573113676027" target="_blank" rel="noopener">escríbenos por WhatsApp</a>.</div>`:""}
     <h3 class="serif" style="font-size:23px;color:var(--forest);margin:34px 0 12px">Mis favoritos</h3>
     ${favs.length?`<div class="card"><table class="tbl"><tbody>${favs.map((f,ix)=>{const c=colorById(f.colorId);return `<tr>
       <td><div class="cell-color"><span class="mini-swatch" style="${miniStyle(c)}"></span><b>${esc(c.name)}</b></div></td><td>${f.size}</td>
@@ -1941,21 +1970,20 @@ function viewRapido(){
 /* ============================================================
    PANEL ADMINISTRATIVO
    ============================================================ */
-const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["guia","Guía de uso","📖"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["sala","Sala","🌿"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
+const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["guia","Guía de uso","📖"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
 function viewAdmin(){
   if(!DB.admin.user) return viewLogin();
   const role=ROLES[DB.admin.role];
   let sec=DB.admin.section;
   if(!role.sections.includes(sec)) sec=role.sections[0], DB.admin.section=sec;
   const counts={
-    pedidos:DB.orders.filter(o=>o.state==="Pago por verificar").length,
+    pedidos:DB.orders.filter(o=>["Pedido recibido","Pago por verificar"].includes(o.state)).length,
     pend:(DB.leads||[]).filter(l=>l.estado==="pendiente").length,
     fact:DB.orders.filter(o=>o.state==="Pendiente de facturación").length,
-    sala:DB.orders.filter(o=>o.state==="En preparación").length,
-    desp:DB.orders.filter(o=>["Listo para despacho","Despachado","En tránsito"].includes(o.state)).length,
+    desp:DB.orders.filter(o=>["Facturado","En preparación","Listo para despacho","Despachado","En tránsito"].includes(o.state)).length,
     reclamos:DB.reclamos.filter(r=>r.estado==="Pendiente").length
   };
-  const body={dash:adDash,guia:adGuia,mes:adMes,pedidos:adPedidos,fact:adFact,sala:adSala,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
+  const body={dash:adDash,guia:adGuia,mes:adMes,pedidos:adPedidos,fact:adFact,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
   return `<div class="admin-shell">
     <aside class="admin-side">
       <div class="who"><b>${esc(DB.admin.user)}</b><small>${role.name}</small></div>
@@ -1970,7 +1998,7 @@ function notifBar(){
   const n=DB.admin.notifications;
   if(!n.length)return "";
   const x=n[0];
-  return `<div class="note blue" style="display:flex;gap:10px;align-items:center;margin:0 0 20px">🔔 <b>Nuevo pedido recibido</b> — ${x.order} · ${esc(x.client)} · ${esc(x.city)} · ${money(x.total)} · Pago: Por verificar
+  return `<div class="note blue" style="display:flex;gap:10px;align-items:center;margin:0 0 20px">🔔 <b>Nuevo pedido recibido</b> — ${x.order} · ${esc(x.client)} · ${esc(x.city)} · ${money(x.total)} · Por confirmar disponibilidad
   <button class="btn btn-soft btn-sm" style="margin-left:auto" data-notif-open="${x.order}">Ver</button>
   <button class="btn btn-danger btn-sm" data-notif-x>✕</button></div>`;
 }
@@ -1997,26 +2025,27 @@ function ordersInRange(days){
 }
 function adTareas(){
   const act=DB.orders.filter(o=>!["Entregado","Cancelado"].includes(o.state));
-  const fila=(o,btns)=>{const t=orderTotals(o);return `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:200px"><b>${o.number}</b> · ${esc(o.client.name)} · ${esc(o.shipping.city)}<br><small style="color:var(--ink-faint)">${t.stems} tallos · ${money(t.total)} · ${fdate(o.createdAt)}${o.payMode==="credito"?" · crédito":""}</small></div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>`;};
-  const grupo=(titulo,lista,fn)=>lista.length?`<div style="margin-top:14px"><div class="eyebrow" style="margin-bottom:2px">${titulo} (${lista.length})</div>${lista.map(o=>fila(o,fn(o))).join("")}</div>`:"";
-  const porAprobar=act.filter(o=>o.state==="Pago por verificar");
+  const fk=o=>String((o.shipping&&o.shipping.dispatchDate)||"9999")+String(o.createdAt||"");
+  const byDate=(a,b)=>fk(a)<fk(b)?-1:1;
+  const fila=(o,btns)=>{const t=orderTotals(o);return `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:200px"><b>${o.number}</b> · ${esc(o.client.name)} · ${esc(o.shipping.city)}<br><small style="color:var(--ink-faint)">${t.stems} tallos · ${money(t.total)} · pedido ${fdate(o.createdAt)}${o.payMode==="credito"?" · crédito":""}</small><br><small style="color:var(--forest);font-weight:700">🚚 Despacho: ${dispatchText(o)}</small></div><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>`;};
+  const grupo=(titulo,lista,fn)=>lista.length?`<div style="margin-top:14px"><div class="eyebrow" style="margin-bottom:2px">${titulo} (${lista.length})</div>${lista.slice().sort(byDate).map(o=>fila(o,fn(o))).join("")}</div>`:"";
+  const porConfirmar=act.filter(o=>o.state==="Pedido recibido");
+  const porPago=act.filter(o=>o.state==="Pago por verificar");
   const porFacturar=act.filter(o=>["Pago confirmado","Pendiente de facturación"].includes(o.state));
-  const aSala=act.filter(o=>o.state==="Facturado");
-  const enSala=act.filter(o=>o.state==="En preparación");
-  const porDespachar=act.filter(o=>o.state==="Listo para despacho");
+  const porDespachar=act.filter(o=>["Facturado","En preparación","Listo para despacho"].includes(o.state));
   const enCamino=act.filter(o=>["Despachado","En tránsito"].includes(o.state));
-  const porCobrar=DB.orders.filter(o=>(o.payMode==="credito"||o.paymentException)&&!o.creditPaid&&o.state!=="Cancelado"&&!["Pago por verificar"].includes(o.state));
-  const total=porAprobar.length+porFacturar.length+aSala.length+enSala.length+porDespachar.length+enCamino.length;
+  const porCobrar=DB.orders.filter(o=>(o.payMode==="credito"||o.paymentException)&&!o.creditPaid&&o.state!=="Cancelado"&&!["Pedido recibido","Pago por verificar"].includes(o.state));
+  const total=porConfirmar.length+porPago.length+porFacturar.length+porDespachar.length+enCamino.length;
   const abrir=o=>`<button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver</button>`;
+  const sinGuia=o=>!(o.dispatch&&o.dispatch.guide&&o.dispatch.guide!=="Pendiente"&&o.dispatch.guide!=="Por asignar");
   return `<div class="card card-pad" style="margin-bottom:22px;border-left:4px solid var(--forest)">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-size:19px;color:var(--forest)">✅ Pendientes de hoy</h3><small style="color:var(--ink-faint)">${total?total+" pedido"+(total!==1?"s":"")+" en proceso":"Todo al día"}</small></div>
     ${total||porCobrar.length?"":`<p style="margin:10px 0 0;color:var(--ink-soft);font-size:14px">No hay pedidos pendientes. Cuando entre uno, aparece aquí con el botón de lo que toca hacer.</p>`}
-    ${grupo("1 · Por aprobar",porAprobar,o=>(o.payMode==="credito"?`<button class="btn btn-primary btn-sm" data-act="Pago confirmado" data-oid="${o.id}">✓ Aprobar crédito</button>`:`<button class="btn btn-primary btn-sm" data-open-order="${o.id}">Revisar comprobante</button>`)+abrir(o))}
-    ${grupo("2 · Por facturar",porFacturar,o=>`<button class="btn btn-primary btn-sm" data-goto-fact>🧾 Facturar</button>`+abrir(o))}
-    ${grupo("3 · Facturados, pasar a sala",aSala,o=>`<button class="btn btn-primary btn-sm" data-act="En preparación" data-oid="${o.id}">🌿 Pasar a sala</button>`+abrir(o))}
-    ${grupo("4 · En preparación (Sala)",enSala,o=>`<button class="btn btn-primary btn-sm" data-sec="sala">Ir a Sala</button>`+abrir(o))}
-    ${grupo("5 · Listos para despachar",porDespachar,o=>`<button class="btn btn-primary btn-sm" data-goto-desp>🚚 Despachar</button>`+abrir(o))}
-    ${grupo("6 · En camino",enCamino,o=>(o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:"")+`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`+abrir(o))}
+    ${grupo("1 · Confirmar disponibilidad (el cliente espera tu WhatsApp)",porConfirmar,o=>`<button class="btn btn-primary btn-sm" data-confirm-avail="${o.id}">✓ Confirmar y avisar por WhatsApp</button><button class="btn btn-hydr btn-sm" data-propose="${o.id}">✎ Proponer cambio</button>`+abrir(o))}
+    ${grupo("2 · Esperando el pago del cliente",porPago,o=>`<button class="btn btn-primary btn-sm" data-act="Pago confirmado" data-oid="${o.id}">💳 Registrar pago recibido</button><a class="btn btn-soft btn-sm" target="_blank" rel="noopener" href="${waLink(o,waRecordatorioMsg(o))}">💬 Recordar pago</a>`+abrir(o))}
+    ${grupo("3 · Por facturar",porFacturar,o=>`<button class="btn btn-primary btn-sm" data-goto-fact>🧾 Facturar</button>`+abrir(o))}
+    ${grupo("4 · Facturados: imprimir orden de trabajo y despachar",porDespachar,o=>`<button class="btn btn-soft btn-sm" data-sec="orden">🖨 Orden de trabajo</button><button class="btn btn-primary btn-sm" data-goto-desp>🚚 Despachar</button>`+abrir(o))}
+    ${grupo("5 · En camino",enCamino,o=>(sinGuia(o)?`<button class="btn btn-hydr btn-sm" data-goto-desp>Nº de guía pendiente</button>`:"")+(o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:"")+`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`+abrir(o))}
     ${grupo("💳 Créditos por cobrar",porCobrar,o=>`<button class="btn btn-hydr btn-sm" data-credit-paid="${o.id}">💳 Registrar pago</button>`+abrir(o))}
   </div>`;
 }
@@ -2169,7 +2198,7 @@ function adPedidos(){
   <div class="card"><div class="tbl-scroll"><table class="tbl">
     <thead><tr><th>Pedido</th><th>Fecha · hora</th><th>Cliente</th><th>Ciudad</th><th class="num">Tallos</th><th class="num">Valor</th><th>Factura</th><th>Guía</th><th>Estado</th></tr></thead>
     <tbody>${list.map(o=>{const t=orderTotals(o);return `<tr data-open-order="${o.id}" style="cursor:pointer">
-      <td style="white-space:nowrap"><b>${o.number}</b></td><td style="white-space:nowrap">${fdate(o.createdAt)}<br><small style="color:var(--ink-faint)">${ftime(o.createdAt)} · ${o.dispatchRule.sameDay?"antes":"después"} 10 a.m.</small></td>
+      <td style="white-space:nowrap"><b>${o.number}</b></td><td style="white-space:nowrap">${fdate(o.createdAt)}<br><small style="color:var(--ink-faint)">${ftime(o.createdAt)}<br>🚚 ${esc(dispatchText(o))}</small></td>
       <td>${esc(o.client.name)}</td><td>${esc(o.shipping.city)}</td>
       <td class="num">${t.stems}</td><td class="num"><b>${money(t.total)}</b></td>
       <td>${o.invoice?o.invoice.number:'<small style="color:var(--ink-faint)">'+o.invoiceState+"</small>"}</td>
@@ -2185,16 +2214,16 @@ function adGuia(){
   return `
   <h2>Guía de uso del panel</h2>
   <p class="admin-sub">Qué hacer desde que entra un pedido hasta que se entrega. Cada paso cambia el estado del pedido y queda registrado en su historial.</p>
-  ${paso("★","Lo más fácil: usa «Pendientes de hoy»","En el <b>Dashboard</b>, arriba, está la lista <b>«✅ Pendientes de hoy»</b>: cada pedido aparece en el grupo de lo que le toca (aprobar, facturar, pasar a sala, despachar, entregar) con el botón de esa acción al lado. Puedes operar todo desde ahí sin recorrer las secciones.")}
-  ${paso(1,"Llega un pedido","Suena un aviso, aparece una notificación y una barra azul <b>«Nuevo pedido recibido»</b>. Los pedidos nuevos quedan en <b>Pedidos</b> con el estado <span class=\"badge st-verificar\">Pago por verificar</span>. Haz clic en el pedido para ver cliente, dirección, productos, comprobante e historial. Si no ves el aviso, el contador rojo al lado de «Pedidos» muestra cuántos esperan revisión.")}
-  ${paso(2,"Revisar y aprobar (Ventas)","Dentro del pedido: si pagó por <b>transferencia</b>, revisa el comprobante y pulsa <b>«✓ Verificar y confirmar pago»</b>. Si es un cliente a <b>crédito</b>, pulsa <b>«✓ Aprobar pedido a crédito»</b>. Si el pago no ha llegado pero quieres avanzar, usa <b>«◐ Aprobar y dejar pago pendiente»</b>. Si el pedido no procede, <b>«Cancelar pedido»</b>. ¿Hay que corregir algo (cantidades, colores, unir dos pedidos del mismo cliente)? Usa <b>«✏️ Editar pedido»</b> antes de facturar.")}
-  ${paso(3,"Pasa solo a Facturación","Al aprobar, el pedido pasa automáticamente a la cola de <b>Facturación</b> (estado «Pendiente de facturación»). No hay que hacer nada más en este paso.")}
-  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> aparece una tarjeta por cada pedido que ya pasó por el paso 3 (si no ves ninguna, al pedido le falta ese paso). <b>a)</b> Pulsa <b>«⬇ Exportar»</b>: se descarga un archivo .csv a tu carpeta de Descargas (no abre ninguna página); ábrelo en Excel o cárgalo en la macro del cultivo. <b>b)</b> Genera la factura en la macro como siempre. <b>c)</b> Escribe el <b>número de factura</b> que dio la macro (y el descuento si lo hay) en la tarjeta del pedido y pulsa <b>«✓ Marcar facturado»</b>. El pedido queda Facturado y pasa a Sala.")}
-  ${paso(5,"Pasar a sala","Abre el pedido facturado y pulsa <b>«🌿 Pasar a sala»</b>. El pedido pasa a <b>Sala</b> y a la <b>Orden de trabajo</b> (vista consolidada por cliente, color, grado y cantidad, con botón para imprimir).")}
-  ${paso(6,"Preparar (Sala)","En <b>Sala</b> cada pedido es una tarjeta con la lista de colores, grado y tallos. Marca cada línea a medida que se prepara. Cuando todas están marcadas se activa <b>«✓ Pedido listo para despacho»</b>.")}
-  ${paso(7,"Despachar (Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe la transportadora (Coordinadora Mercantil), el <b>número de guía</b> y quién entrega, y pulsa <b>«🚚 Registrar despacho»</b>. Luego, en «En camino», marca <b>«En tránsito»</b> y, cuando el cliente lo reciba, <b>«✓ Entregado»</b>. Con eso el pedido sale de todos los pendientes; en Pedidos queda guardado bajo «Ver finalizados».")}
-  ${paso(8,"Cobrar un crédito","Los pedidos a crédito (o aprobados con pago pendiente) muestran la etiqueta «pago pendiente». Cuando el cliente pague, abre el pedido y pulsa <b>«💳 Registrar pago»</b>.")}
-  <div class="card card-pad" style="margin-top:18px"><b>Buscar y exportar</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">En <b>Pedidos</b> puedes buscar por número, cliente, ciudad o fecha, filtrar por estado y descargar <b>«⬇ Exportar CSV»</b> (una fila por color, con grado, cantidad y precio; se abre en Excel). <b>Clientes</b> muestra el historial de cada cliente y si tiene crédito. <b>Reclamos</b> registra y aprueba reclamaciones.</div></div>
+  ${paso("★","Lo más fácil: usa «Pendientes de hoy»","En el <b>Dashboard</b>, arriba, está la lista <b>«✅ Pendientes de hoy»</b>: cada pedido aparece en el grupo de lo que le toca (confirmar, registrar pago, facturar, despachar, entregar) con el botón de esa acción al lado y el <b>día de despacho</b> que pidió el cliente. Puedes operar todo desde ahí.")}
+  ${paso(1,"Llega un pedido","Suena un aviso, aparece una notificación y una barra azul <b>«Nuevo pedido recibido»</b>. El cliente eligió el <b>día de despacho</b> (lunes a viernes, sin festivos) y <b>todavía no ha pagado</b>: queda en <span class=\"badge st-recibido\">Pedido recibido</span> esperando que confirmes que hay flor.")}
+  ${paso(2,"Confirmar disponibilidad (Ventas)","Revisa colores, grados y cantidades. <b>Si todo hay:</b> pulsa <b>«✓ Confirmar y avisar por WhatsApp»</b>: se abre WhatsApp con el mensaje listo para el cliente (pedido, total, día de despacho y los datos de la cuenta para pagar); solo tienes que enviarlo. El pedido pasa a <span class=\"badge st-verificar\">Pago por verificar</span>. Si es cliente a <b>crédito</b>, al confirmar pasa directo a Facturación. <b>Si falta algo:</b> pulsa <b>«✎ Proponer cambio»</b>, completa en el mensaje qué no hay y qué le puedes enviar, y ábrelo en WhatsApp. Cuando el cliente acepte, usa <b>«✏️ Editar pedido»</b> para ajustarlo y luego confirma.")}
+  ${paso(3,"Registrar el pago","El cliente transfiere y te manda el comprobante por WhatsApp. Abre el pedido (o usa el grupo «Esperando el pago») y pulsa <b>«💳 Registrar pago recibido»</b>: el pedido pasa solo a la cola de <b>Facturación</b>. Si no ha pagado, <b>«💬 Recordar pago»</b> abre WhatsApp con un recordatorio.")}
+  ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> hay una tarjeta por pedido. Factura como siempre — <b>World Office</b> si lleva IVA, o la <b>plantilla de Excel</b> — (si quieres, «⬇ Exportar» descarga un .csv con los datos del pedido). Escribe el <b>número de factura</b> (y el descuento si lo hay) y pulsa <b>«✓ Marcar facturado»</b>. El pedido pasa a <b>Despacho</b> y aparece en la <b>Orden de trabajo</b>.")}
+  ${paso(5,"Imprimir la orden de trabajo","En <b>Orden de trabajo</b> están todos los pedidos facturados con cliente, color, grado, cantidad y día de despacho. Pulsa <b>«🖨 Imprimir»</b> y entrégala a quien prepara las flores.")}
+  ${paso(6,"Despachar (Jorge / Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe el <b>número de guía</b> de Coordinadora si ya lo tienes y pulsa <b>«🚚 Registrar despacho»</b>. Si la guía llega después, regístrala en «En camino» con <b>«Guardar guía»</b>: el cliente la ve al instante en <b>Mis pedidos</b>. Luego marca <b>«En tránsito»</b> y, cuando el cliente reciba, <b>«✓ Entregado»</b>.")}
+  ${paso(7,"Cobrar un crédito","Los pedidos a crédito (o avanzados con pago pendiente) muestran la etiqueta «pago pendiente». Cuando el cliente pague, abre el pedido y pulsa <b>«💳 Registrar pago»</b>.")}
+  ${paso(8,"Colores, disponibilidad y precios","En <b>Más → Colores</b> puedes marcar un color como <b>Disponible / Pocas unidades / Agotado</b>, desactivarlo o cambiar su precio por grado; en <b>Más → Precios</b> cambias la tabla general. Todo se guarda en la base de datos y se refleja de inmediato en lo que ve el cliente.")}
+  <div class="card card-pad" style="margin-top:18px"><b>Buscar y exportar</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">En <b>Pedidos</b> puedes buscar por número, cliente, ciudad o fecha, filtrar por estado y descargar <b>«⬇ Exportar CSV»</b> (una fila por color, con grado, cantidad, precio y día de despacho; se abre en Excel). <b>Clientes</b> muestra el historial de cada cliente y si tiene crédito. <b>Reclamos</b> registra y aprueba reclamaciones.</div></div>
   <div class="card card-pad" style="margin-top:12px"><b>Si algo no abre o se ve raro</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">Recarga la página (F5) o cierra sesión y vuelve a entrar. Los pedidos viven en la base de datos: no se pierden al recargar.</div></div>`;
 }
 function editRowHTML(i,ix){
@@ -2219,29 +2248,31 @@ function renderDrawer(){
   const role=DB.admin.role;
   const acts=[];
   const can=s=>ROLES[role].sections.includes(s);
+  if(o.state==="Pedido recibido"&&can("pedidos")){
+    acts.push(`<button class="btn btn-primary" data-confirm-avail="${o.id}">✓ Confirmar disponibilidad y avisar por WhatsApp</button>`);
+    acts.push(`<button class="btn btn-hydr" data-propose="${o.id}">✎ Proponer cambio por WhatsApp</button>`);
+    acts.push(`<button class="btn btn-danger" data-act="Cancelado" data-oid="${o.id}">Cancelar pedido</button>`);
+  }
   if(o.state==="Pago por verificar"&&(can("pedidos"))){
-    if(o.payMode==="credito"){
-      acts.push(`<button class="btn btn-primary" data-act="Pago confirmado" data-oid="${o.id}">✓ Aprobar pedido a crédito</button>`);
-    } else {
-      acts.push(`<button class="btn btn-primary" data-act="Pago confirmado" data-oid="${o.id}">✓ Verificar y confirmar pago</button>`);
-      acts.push(`<button class="btn btn-hydr" data-except="${o.id}">◐ Aprobar y dejar pago pendiente</button>`);
-    }
+    acts.push(`<button class="btn btn-primary" data-act="Pago confirmado" data-oid="${o.id}">💳 Registrar pago recibido (comprobante por WhatsApp)</button>`);
+    acts.push(`<button class="btn btn-hydr" data-except="${o.id}">◐ Avanzar y dejar el pago pendiente</button>`);
+    acts.push(`<a class="btn btn-soft" target="_blank" rel="noopener" href="${waLink(o,waRecordatorioMsg(o))}">💬 Recordar pago</a>`);
     acts.push(`<button class="btn btn-danger" data-act="Cancelado" data-oid="${o.id}">Cancelar pedido</button>`);
   }
   if(o.state==="Pago confirmado") acts.push(`<button class="btn btn-primary" data-act="Pendiente de facturación" data-oid="${o.id}">Confirmar pedido → a facturación</button>`);
   if(o.state==="Pendiente de facturación"&&(can("fact")||role==="admin")) acts.push(`<button class="btn btn-hydr" data-goto-fact>🧾 Ir a facturación →</button>`);
-  if(o.state==="Facturado") acts.push(`<button class="btn btn-primary" data-act="En preparación" data-oid="${o.id}">🌿 Pasar a sala</button>`);
-  if(o.state==="Listo para despacho"&&(can("desp")||role==="admin")) acts.push(`<button class="btn btn-primary" data-goto-desp>Ir a despacho →</button>`);
+  if(["Facturado","En preparación","Listo para despacho"].includes(o.state)&&(can("desp")||role==="admin")){acts.push(`<button class="btn btn-soft" data-sec="orden">🖨 Orden de trabajo</button>`);acts.push(`<button class="btn btn-primary" data-goto-desp>🚚 Ir a despacho →</button>`);}
   if((o.payMode==="credito"||o.paymentException)&&!o.creditPaid) acts.push(`<button class="btn btn-hydr" data-credit-paid="${o.id}">💳 Registrar pago ${o.payMode==="credito"?"del crédito":"pendiente"}</button>`);
   if(o.state==="Despachado") acts.push(`<button class="btn btn-soft" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`);
   if(o.state==="En tránsito") acts.push(`<button class="btn btn-primary" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`);
-  if(["Pago por verificar","Pago confirmado","Pendiente de facturación"].includes(o.state)&&["admin","ventas","fact"].includes(role)&&DB.ui.editOrder!==o.id) acts.push(`<button class="btn btn-soft" data-edit-order="${o.id}">✏️ Editar pedido</button>`);
+  if(["Pedido recibido","Pago por verificar","Pago confirmado","Pendiente de facturación"].includes(o.state)&&["admin","ventas","fact"].includes(role)&&DB.ui.editOrder!==o.id) acts.push(`<button class="btn btn-soft" data-edit-order="${o.id}">✏️ Editar pedido</button>`);
   return `<div class="drawer-back" data-close-drawer><div class="drawer">
     <button class="modal-close" data-close-drawer aria-label="Cerrar">✕</button>
     <div class="eyebrow">Pedido</div>
     <h2 style="font-size:30px;color:var(--forest)">${o.number} <span class="badge ${STATE_CLASS[o.state]}" style="vertical-align:middle">${o.state}</span></h2>
-    <p class="admin-sub">${fdt(o.createdAt)} · ${o.dispatchRule.sameDay?"antes":"después"} de las 10:00 a. m. → despacho ${o.dispatchRule.sameDay?"mismo día":"día siguiente"} (tras confirmar pago)</p>
+    <p class="admin-sub">Pedido ${fdt(o.createdAt)} · <b style="color:var(--forest)">🚚 Despacho solicitado: ${dispatchText(o)}</b>${o.client.wa||o.client.phone?` · WhatsApp ${esc(o.client.wa||o.client.phone)}`:""}</p>
     ${acts.length?`<div class="action-row">${acts.join("")}</div>`:""}
+    ${DB.ui.propose===o.id?proposePanel(o):""}
     <div class="card card-pad" style="margin-bottom:14px">
       ${DB.ui.editOrder===o.id?editOrderForm(o):`<h4 style="font-size:14px;color:var(--ink-soft);margin-bottom:10px">PRODUCTOS</h4>
       ${o.items.map(i=>{const c=colorById(i.colorId)||{name:i.name||i.colorId||"Color",code:i.code||"",cat:"",tone:["#e4e4e4","#d6d6d6","#c8c8c8","#bcbcbc"]};return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px"><span class="mini-swatch" style="${miniStyle(c)}"></span>${esc(c.name)} — ${i.size}<b style="margin-left:auto">${i.qty} × ${money(i.unit)} = ${money(i.qty*i.unit)}</b></div>`;}).join("")}
@@ -2259,8 +2290,8 @@ function renderDrawer(){
           ?`Modo: <b style="color:var(--forest)">CRÉDITO</b> · ${o.creditPaid?'<span class="badge st-pago">Pagado</span>':'<span class="badge st-verificar">Por cobrar</span>'}`
           :o.paymentException
             ?`Modo: <b style="color:var(--forest)">APROBADO POR EXCEPCIÓN</b> · ${o.creditPaid?'<span class="badge st-pago">Pago recibido</span>':'<span class="badge st-verificar">Pago pendiente</span>'}<br>Comprobante: 📎 ${esc(o.receipt?o.receipt.name:"—")}`
-            :`Comprobante: 📎 ${esc(o.receipt?o.receipt.name:"—")}${o.receipt&&o.receipt.dataUrl&&String(o.receipt.type||"").startsWith("image")?`<img class="upload-preview" src="${o.receipt.dataUrl}" alt="Comprobante">`:" <small style='color:var(--ink-faint)'>(archivo de prueba)</small>"}`}<br>
-        ${o.dispatch?`Transportadora: <b>${esc(o.dispatch.carrier)}</b><br>Guía: <b>${esc(o.dispatch.guide)}</b><br>Entregó: ${esc(o.dispatch.by)} · ${fdt(o.dispatch.at)} · Contraentrega`:"Aún sin despacho."}</p></div>
+            :`Pago por transferencia: <b>${o.state==="Pedido recibido"?"pendiente de confirmar disponibilidad":o.state==="Pago por verificar"?"esperando la transferencia del cliente":o.state==="Cancelado"?"—":"recibido (comprobante por WhatsApp)"}</b>${o.receipt?`<br>Comprobante: 📎 ${esc(o.receipt.name||"")}${o.receipt.dataUrl&&String(o.receipt.type||"").startsWith("image")?`<img class="upload-preview" src="${o.receipt.dataUrl}" alt="Comprobante">`:""}`:""}`}<br>
+        ${o.dispatch?`Transportadora: <b>${esc(o.dispatch.carrier)}</b><br>Guía: <b>${esc(o.dispatch.guide||"Pendiente")}</b>${o.dispatch.guide&&o.dispatch.guide!=="Pendiente"?"":" <small style=\"color:var(--warn)\">(agrégala en Despacho → En camino)</small>"}<br>Entregó: ${esc(o.dispatch.by)} · ${fdt(o.dispatch.at)} · Contraentrega`:`Despacho solicitado: <b>${dispatchText(o)}</b> · aún sin despachar.`}</p></div>
     </div>
     <div class="card card-pad">
       <h4 style="font-size:13px;color:var(--ink-soft)">HISTORIAL / TRAZABILIDAD</h4>
@@ -2275,26 +2306,25 @@ function adFact(){
   const done=DB.orders.filter(o=>o.invoice);
   return `
   <h2>Facturación</h2>
-  <p class="admin-sub">Hoy la facturación se hace con la <b>macro de Excel</b> del cultivo (no es facturación electrónica DIAN). Esta pantalla entrega los datos listos para la macro y deja la arquitectura preparada para conectar un sistema con API más adelante.</p>
-  <div class="note green" style="margin-top:0">Flujo: pago confirmado → pedido entra a esta cola → <b>Exportar para macro Excel</b> → generas la factura en Excel → registras aquí el número → el pedido pasa a sala.</div>
+  <p class="admin-sub">Aquí llegan los pedidos con el pago registrado (o a crédito ya confirmado). Factura como siempre — en <b>World Office</b> si lleva IVA, o con la <b>plantilla de Excel</b> — y registra el número: el pedido pasa a <b>Despacho</b> y aparece en la <b>Orden de trabajo</b> para imprimir.</p>
   <h3 class="serif" style="font-size:21px;color:var(--forest);margin:22px 0 10px">Pendientes de facturar (${pend.length})</h3>
   ${pend.length?`
   <div class="card card-pad" style="margin-bottom:14px"><b>Cómo facturar un pedido (3 pasos)</b>
     <ol style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8;color:var(--ink-soft)">
-      <li><b>Exportar:</b> pulsa «⬇ Exportar». Se descarga un archivo <b>.csv</b> a tu carpeta de <b>Descargas</b> (cliente, NIT, color, grado, cantidad y precio). Ábrelo en Excel o cárgalo en la macro del cultivo. No abre ninguna página: solo descarga el archivo.</li>
-      <li><b>Facturar en la macro</b> como siempre y anota el número de factura que generó.</li>
-      <li><b>Registrar aquí:</b> escribe ese número (y el descuento, si lo hay) en la tarjeta del pedido y pulsa «✓ Marcar facturado». El pedido pasa a Sala.</li>
+      <li><b>Exportar (opcional):</b> pulsa «⬇ Exportar». Se descarga un archivo <b>.csv</b> a tu carpeta de <b>Descargas</b> con cliente, NIT, color, grado, cantidad y precio, para copiar los datos a World Office o a la plantilla. No abre ninguna página: solo descarga el archivo.</li>
+      <li><b>Facturar</b> en World Office (con IVA) o en la plantilla de Excel, como siempre, y anota el número de la factura.</li>
+      <li><b>Registrar aquí:</b> escribe ese número (y el descuento, si lo hay) en la tarjeta del pedido y pulsa «✓ Marcar facturado». El pedido pasa a Despacho y a la Orden de trabajo.</li>
     </ol></div>
-  <div class="action-row" style="margin-top:0"><button class="btn btn-hydr" data-export-fact>⬇ Exportar todos los pendientes para la macro (.csv)</button></div>
+  <div class="action-row" style="margin-top:0"><button class="btn btn-hydr" data-export-fact>⬇ Exportar todos los pendientes (.csv)</button></div>
   <div class="grid-2">${pend.map(o=>{const t=orderTotals(o);return `<div class="card card-pad">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b style="font-size:17px">${o.number}</b><b style="color:var(--forest)">${money(t.total)}</b></div>
       <p style="font-size:14px;color:var(--ink-soft);margin:4px 0 12px"><b>${esc(o.billing.name||o.client.name)}</b> · ${esc(((o.billing.doctype||"")+" "+(o.billing.doc||"")).trim())}<br>${t.stems} tallos · ${o.items.length} color${o.items.length!==1?"es":""} · ${esc(o.shipping.city)}</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
-        <div class="field" style="margin:0"><label>Nº de factura (de la macro)</label><input placeholder="Ej: FSI-00120" data-fact-no="${o.id}" style="width:160px"></div>
+        <div class="field" style="margin:0"><label>Nº de factura</label><input placeholder="Ej: FSI-00120" data-fact-no="${o.id}" style="width:160px"></div>
         <div class="field" style="margin:0"><label>Descuento ($)</label><input type="number" min="0" step="1000" placeholder="0" data-fact-disc="${o.id}" style="width:110px;text-align:right"></div>
       </div>
       <div class="action-row" style="margin:12px 0 0"><button class="btn btn-primary btn-sm" data-fact-ok="${o.id}">✓ Marcar facturado</button><button class="btn btn-soft btn-sm" data-export-fact-one="${o.id}">⬇ Exportar este pedido</button><button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver pedido</button></div>
-    </div>`;}).join("")}</div>`:`<div class="card card-pad" style="color:var(--ink-soft)"><b>No hay pedidos pendientes de facturar.</b><br><span style="font-size:14px">Aquí aparecen los pedidos después de confirmar el pago y pulsar «Confirmar pedido → a facturación» en el detalle del pedido (sección Pedidos).</span></div>`}
+    </div>`;}).join("")}</div>`:`<div class="card card-pad" style="color:var(--ink-soft)"><b>No hay pedidos pendientes de facturar.</b><br><span style="font-size:14px">Aquí aparecen los pedidos cuando registras el pago recibido o confirmas un pedido a crédito.</span></div>`}
   <h3 class="serif" style="font-size:21px;color:var(--forest);margin:30px 0 10px">Facturas registradas (${done.length})</h3>
   <div class="card"><div class="tbl-scroll"><table class="tbl">
     <thead><tr><th>Factura</th><th>Fecha</th><th>Pedido</th><th>Cliente</th><th class="num">Valor</th><th class="num">Descuento</th><th>Origen</th></tr></thead>
@@ -2302,49 +2332,30 @@ function adFact(){
   </table></div></div>`;
 }
 
-/* ---------- Sala ---------- */
-function adSala(){
-  const list=DB.orders.filter(o=>o.state==="En preparación");
-  return `
-  <h2>Sala de preparación</h2>
-  <p class="admin-sub">Pedidos con pago confirmado y factura lista. Marca cada línea al prepararla.</p>
-  ${list.length?`<div class="grid-2">${list.map(o=>{const t=orderTotals(o);
-    return `<div class="sala-card">
-      <div class="eyebrow" style="margin-bottom:4px">Pedido</div>
-      <h3>${o.number}</h3>
-      <p style="font-size:14px;color:var(--ink-soft);margin:4px 0 14px">Cliente: <b>${esc(o.client.name)}</b> · Ciudad: <b>${esc(o.shipping.city)}</b></p>
-      <div class="checklist">${o.items.map((i,ix)=>{const c=colorById(i.colorId);const done=o.prep&&o.prep[ix];
-        return `<label class="check-item ${done?"done":""}"><input type="checkbox" ${done?"checked":""} data-prep="${o.id}|${ix}"><span class="mini-swatch" style="${miniStyle(c)}"></span><span>${esc(c.name)} — ${i.size} — <b>${i.qty} tallos</b></span></label>`;}).join("")}</div>
-      <p style="margin:14px 0;font-weight:700;color:var(--forest)">Total: ${t.stems} tallos</p>
-      <button class="btn btn-primary btn-block" data-act="Listo para despacho" data-oid="${o.id}" ${o.prep&&o.prep.every(Boolean)?"":"disabled"}>✓ Pedido listo para despacho</button>
-    </div>`;}).join("")}</div>`
-  :`<div class="card card-pad" style="color:var(--ink-faint)">No hay pedidos en preparación en este momento. 🌿</div>`}`;
-}
-
 /* ---------- Orden de trabajo (consolidado para Sala) ---------- */
 function adOrdenTrabajo(){
-  const list=DB.orders.filter(o=>o.state==="En preparación").slice().sort((a,b)=>a.client.name.localeCompare(b.client.name));
+  const list=DB.orders.filter(o=>["Facturado","En preparación","Listo para despacho"].includes(o.state)).slice().sort((a,b)=>String((a.shipping&&a.shipping.dispatchDate)||"9").localeCompare(String((b.shipping&&b.shipping.dispatchDate)||"9"))||a.client.name.localeCompare(b.client.name));
   const rows=[];
   list.forEach(o=>{
     o.items.forEach((i,ix)=>{
       const c=colorById(i.colorId);
-      rows.push({client:o.client.name,city:o.shipping.city,order:o.number,color:c.name,size:i.size,qty:i.qty,done:!!(o.prep&&o.prep[ix])});
+      rows.push({client:o.client.name,city:o.shipping.city,order:o.number,color:c?c.name:(i.name||i.colorId),size:i.size,qty:i.qty,fecha:dispatchText(o)});
     });
   });
   const totalTallos=rows.reduce((a,r)=>a+r.qty,0);
   return `
   <div class="admin-toolbar" style="justify-content:space-between;align-items:center">
-    <div><h2 style="margin:0">Orden de trabajo</h2><p class="admin-sub" style="margin-top:4px">${fdate(new Date().toISOString())} · ${list.length} pedido${list.length!==1?"s":""} en preparación · ${totalTallos} tallos en total</p></div>
+    <div><h2 style="margin:0">Orden de trabajo</h2><p class="admin-sub" style="margin-top:4px">${fdate(new Date().toISOString())} · ${list.length} pedido${list.length!==1?"s":""} facturado${list.length!==1?"s":""} por preparar · ${totalTallos} tallos en total</p></div>
     <button class="btn btn-hydr btn-sm no-print" data-print>🖨 Imprimir</button>
   </div>
-  <p class="admin-sub">Vista consolidada por cliente, color, tamaño y cantidad para planear el trabajo diario de la sala. Para marcar líneas como preparadas, usa la vista <b>Sala</b>.</p>
+  <p class="admin-sub">Lista consolidada por cliente, color, grado y cantidad de los pedidos ya facturados. Imprímela y entrégala a quien prepara las flores; cuando el pedido salga, regístralo en <b>Despacho</b>.</p>
   ${rows.length?`<div class="card"><div class="tbl-scroll"><table class="tbl">
-    <thead><tr><th>Cliente</th><th>Ciudad</th><th>Pedido</th><th>Color</th><th>Tamaño</th><th class="num">Cantidad</th><th>Hecho</th></tr></thead>
+    <thead><tr><th>Despacho</th><th>Cliente</th><th>Ciudad</th><th>Pedido</th><th>Color</th><th>Grado</th><th class="num">Cantidad</th></tr></thead>
     <tbody>${rows.map(r=>`<tr>
-      <td><b>${esc(r.client)}</b></td><td>${esc(r.city)}</td><td style="white-space:nowrap">${r.order}</td><td>${esc(r.color)}</td><td>${r.size}</td>
-      <td class="num"><b>${r.qty}</b></td><td>${r.done?"✓":"—"}</td>
+      <td style="white-space:nowrap">${esc(r.fecha)}</td><td><b>${esc(r.client)}</b></td><td>${esc(r.city)}</td><td style="white-space:nowrap">${r.order}</td><td>${esc(r.color)}</td><td>${r.size}</td>
+      <td class="num"><b>${r.qty}</b></td>
     </tr>`).join("")}</tbody>
-  </table></div></div>`:`<div class="card card-pad" style="color:var(--ink-faint)">No hay pedidos en preparación en este momento. 🌿</div>`}`;
+  </table></div></div>`:`<div class="card card-pad" style="color:var(--ink-faint)">No hay pedidos facturados pendientes de preparar. 🌿</div>`}`;
 }
 
 /* ---------- Audiencia web ---------- */
@@ -2465,17 +2476,18 @@ function adPend(){
 
 /* ---------- Despacho ---------- */
 function adDesp(){
-  const ready=DB.orders.filter(o=>o.state==="Listo para despacho");
+  const ready=DB.orders.filter(o=>["Facturado","En preparación","Listo para despacho"].includes(o.state)).sort((a,b)=>String((a.shipping&&a.shipping.dispatchDate)||"9").localeCompare(String((b.shipping&&b.shipping.dispatchDate)||"9")));
   const moving=DB.orders.filter(o=>["Despachado","En tránsito"].includes(o.state));
+  const conGuia=o=>o.dispatch&&o.dispatch.guide&&o.dispatch.guide!=="Pendiente"&&o.dispatch.guide!=="Por asignar";
   return `
   <h2>Despacho</h2>
-  <p class="admin-sub">Registro de entrega a Coordinadora Mercantil (contraentrega) y seguimiento.</p>
+  <p class="admin-sub">Registro de entrega a Coordinadora Mercantil (contraentrega) y seguimiento. Si aún no tienes el número de guía, registra el despacho y agrégalo después en «En camino»: el cliente lo ve en <b>Mis pedidos</b>.</p>
   <h3 class="serif" style="font-size:21px;color:var(--forest);margin:14px 0 10px">Listos para despachar (${ready.length})</h3>
   ${ready.length?ready.map(o=>`<div class="card card-pad" style="margin-bottom:14px">
     <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:end">
-      <div style="min-width:180px"><b style="font-size:17px">${o.number}</b><br><small style="color:var(--ink-faint)">${esc(o.client.name)} → ${esc(o.shipping.city)} · ${orderTotals(o).stems} tallos</small></div>
+      <div style="min-width:180px"><b style="font-size:17px">${o.number}</b><br><small style="color:var(--ink-faint)">${esc(o.client.name)} → ${esc(o.shipping.city)} · ${orderTotals(o).stems} tallos</small><br><small style="color:var(--forest);font-weight:700">🚚 ${esc(dispatchText(o))}</small></div>
       <div class="field"><label>Transportadora</label><input value="Coordinadora Mercantil" data-d-carrier="${o.id}" style="width:200px"></div>
-      <div class="field"><label>Número de guía</label><input placeholder="Nº de guía" data-d-guide="${o.id}" style="width:170px"></div>
+      <div class="field"><label>Número de guía (puede quedar pendiente)</label><input placeholder="Nº de guía Coordinadora" data-d-guide="${o.id}" style="width:190px"></div>
       <div class="field"><label>Entregado por</label><input value="${esc(DB.admin.user)}" data-d-by="${o.id}" style="width:150px"></div>
       <button class="btn btn-primary" data-dispatch="${o.id}">🚚 Registrar despacho</button>
     </div>
@@ -2485,7 +2497,7 @@ function adDesp(){
     <thead><tr><th>Pedido</th><th>Cliente</th><th>Ciudad</th><th>Guía</th><th>Despachado</th><th>Estado</th><th></th></tr></thead>
     <tbody>${moving.map(o=>`<tr>
       <td style="white-space:nowrap"><b>${o.number}</b></td><td>${esc(o.client.name)}</td><td>${esc(o.shipping.city)}</td>
-      <td><small>${o.dispatch?esc(o.dispatch.guide):"—"}</small></td><td>${o.dispatch?fdt(o.dispatch.at):"—"}</td>
+      <td style="white-space:nowrap">${conGuia(o)&&DB.ui.guideEdit!==o.id?`<b>${esc(o.dispatch.guide)}</b> <button class="btn btn-ghost btn-sm" data-guide-edit="${o.id}" title="Corregir guía">✎</button>`:`<input placeholder="Nº de guía" value="${conGuia(o)?esc(o.dispatch.guide):""}" data-g-input="${o.id}" style="width:140px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px"> <button class="btn btn-hydr btn-sm" data-guide-save="${o.id}">Guardar guía</button>`}</td><td>${o.dispatch?fdt(o.dispatch.at):"—"}</td>
       <td><span class="badge ${STATE_CLASS[o.state]}">${o.state}</span></td>
       <td>${o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`}</td>
     </tr>`).join("")||'<tr><td colspan="7" style="color:var(--ink-faint);text-align:center;padding:24px">Sin envíos en camino.</td></tr>'}</tbody>
@@ -2623,7 +2635,7 @@ function adColores(){
   let list=DB.colors.filter(c=>!q||c.name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q));
   return `
   <h2>Colores</h2>
-  <p class="admin-sub">${DB.colors.length} colores (${DB.colors.filter(c=>c.active).length} activos) · los colores NO están escritos en el código: se crean, editan y desactivan desde aquí</p>
+  <p class="admin-sub">${DB.colors.length} colores (${DB.colors.filter(c=>c.active).length} activos) · la disponibilidad, los precios y el estado de cada color se guardan en la base de datos y se reflejan de inmediato en el catálogo del cliente${DB.ui.catalogoOk?"":" · <span style=\"color:var(--warn)\">(cargando cambios guardados…)</span>"}</p>
   <div class="admin-toolbar">
     <input id="colSearch" type="search" placeholder="Buscar color por nombre o código…" value="${esc(DB.ui.colQ||"")}" style="flex:1;min-width:200px">
     <button class="btn btn-primary btn-sm" data-col-new>+ Crear color</button>
@@ -2648,7 +2660,7 @@ function adColores(){
 function adPrecios(){
   return `
   <h2>Precios</h2>
-  <p class="admin-sub">Listado de precios flor nacional <b>2026</b> — precio por tallo según grado y proceso. Al aplicar, se actualiza todo el catálogo automáticamente.</p>
+  <p class="admin-sub">Listado de precios flor nacional <b>2026</b> — precio por tallo según grado y proceso. Al aplicar, se actualiza todo el catálogo y queda guardado en la base de datos. Para un precio especial en un solo color, edítalo en <b>Colores</b>.</p>
   <div class="card card-pad" style="margin-bottom:20px">
     <div class="tbl-scroll"><table class="tbl">
       <thead><tr><th>Grado</th><th>Tamaño de copa</th><th class="num">Empaque<br><small>tallos/caja</small></th><th class="num">Precio unidad<br><small>natural</small></th><th class="num">Pintado claro</th><th class="num">Pintado fuerte<br>y especial</th></tr></thead>
@@ -2751,11 +2763,11 @@ function exportFact(oid){
     });
   });
   download(oid?"pedido-para-macro.csv":"pendientes-facturar-macro.csv",rows.map(csvRow).join("\n"));
-  toast("Archivo .csv descargado en tu carpeta de Descargas: ábrelo en Excel o cárgalo en la macro");
+  toast("Archivo .csv descargado en tu carpeta de Descargas: ábrelo en Excel o copia los datos a World Office");
 }
 function exportOrders(){
-  const rows=[["Nº pedido","Fecha","Hora","Cliente","Ciudad","Estado","Color","Código","Grado","Cantidad (tallos)","Precio unit.","Subtotal línea","Tallos del pedido","Valor del pedido","Nº factura","Guía"]];
-  DB.orders.forEach(o=>{const t=orderTotals(o);const base=[o.number,fdate(o.createdAt),ftime(o.createdAt),o.client.name,o.shipping.city,o.state];const fin=[t.stems,t.total,o.invoice?o.invoice.number:"",o.dispatch?o.dispatch.guide:""];if(!o.items.length)rows.push([...base,"","","","","","",...fin]);o.items.forEach(i=>{const c=colorById(i.colorId);rows.push([...base,c?c.name:(i.name||i.colorId),c?c.code:(i.code||""),i.size,i.qty,i.unit,i.qty*i.unit,...fin]);});});
+  const rows=[["Nº pedido","Fecha","Hora","Cliente","Ciudad","Estado","Color","Código","Grado","Cantidad (tallos)","Precio unit.","Subtotal línea","Tallos del pedido","Valor del pedido","Nº factura","Guía","Despacho solicitado"]];
+  DB.orders.forEach(o=>{const t=orderTotals(o);const base=[o.number,fdate(o.createdAt),ftime(o.createdAt),o.client.name,o.shipping.city,o.state];const fin=[t.stems,t.total,o.invoice?o.invoice.number:"",o.dispatch?o.dispatch.guide:"",dispatchText(o)];if(!o.items.length)rows.push([...base,"","","","","","",...fin]);o.items.forEach(i=>{const c=colorById(i.colorId);rows.push([...base,c?c.name:(i.name||i.colorId),c?c.code:(i.code||""),i.size,i.qty,i.unit,i.qty*i.unit,...fin]);});});
   download("pedidos-cultivo-san-isidro.csv",rows.map(csvRow).join("\n"));
   toast("Pedidos exportados: una fila por color");
 }
@@ -2763,7 +2775,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2865,6 +2877,48 @@ document.addEventListener("click",async e=>{
   if(d.exportFactOne!==undefined){exportFact(d.exportFactOne);return;}
   if(d.notifX!==undefined){DB.admin.notifications.shift();render();return;}
   if(d.notifOpen!==undefined){const o=DB.orders.find(x=>x.number===d.notifOpen);DB.admin.section="pedidos";DB.ui.drawer=o?o.id:null;DB.admin.notifications.shift();render();return;}
+  if(d.confirmAvail!==undefined){
+    const o=DB.orders.find(x=>x.id===d.confirmAvail);if(!o)return;
+    const quien=DB.admin.user+" ("+ROLES[DB.admin.role].name+")";
+    const url=waLink(o,waConfirmMsg(o));
+    if(o.payMode==="credito"){pushHistory(o,"Disponibilidad confirmada — aviso enviado por WhatsApp (crédito)",quien);applyState(o,"Pendiente de facturación",quien,true);}
+    else{o.state="Pago por verificar";pushHistory(o,"Disponibilidad confirmada — aviso y datos de pago enviados por WhatsApp; esperando la transferencia",quien);}
+    DB.ui.propose=null;
+    window.open(url,"_blank");
+    toast("Pedido "+o.number+" confirmado — se abrió WhatsApp con el mensaje para el cliente");render();return;
+  }
+  if(d.propose!==undefined){DB.ui.propose=d.propose;DB.ui.drawer=d.propose;render();return;}
+  if(d.proposeClose!==undefined){DB.ui.propose=null;render();return;}
+  if(d.proposeSend!==undefined){
+    const o=DB.orders.find(x=>x.id===d.proposeSend);if(!o)return;
+    const msg=(($("#proposeMsg")||{}).value||waProposeMsg(o)).trim();
+    pushHistory(o,"Propuesta de cambio enviada al cliente por WhatsApp",DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
+    DB.ui.propose=null;
+    window.open(waLink(o,msg),"_blank");toast("Se abrió WhatsApp con tu propuesta");render();return;
+  }
+  if(d.guideEdit!==undefined){DB.ui.guideEdit=d.guideEdit;render();return;}
+  if(d.guideSave!==undefined){
+    const o=DB.orders.find(x=>x.id===d.guideSave);if(!o)return;
+    const g=(document.querySelector(`[data-g-input="${o.id}"]`)?.value||"").trim();
+    if(!g){toast("Escribe el número de guía",true);return;}
+    o.dispatch=o.dispatch||{carrier:"Coordinadora Mercantil",at:new Date().toISOString(),by:DB.admin.user,payMode:"Contraentrega"};
+    o.dispatch.guide=g;pushHistory(o,"Guía Coordinadora registrada: "+g,DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
+    DB.ui.guideEdit=null;toast("Guía "+g+" guardada — el cliente ya la ve en «Mis pedidos»");render();return;
+  }
+  if(d.misBuscar!==undefined){
+    const v=(($("#misContacto")||{}).value||"").trim();DB.ui.misContacto=v;
+    if(v.replace(/\D/g,"").length<7&&!v.includes("@")){DB.ui.misMsg="Escribe tu número de celular o tu correo";DB.ui.misPedidos=null;render();return;}
+    t.disabled=true;t.textContent="Buscando…";
+    try{const rows=await sbMisPedidos(v);DB.ui.misPedidos=Array.isArray(rows)?rows:[];DB.ui.misMsg=DB.ui.misPedidos.length?DB.ui.misPedidos.length+" pedido"+(DB.ui.misPedidos.length!==1?"s":""):"";}
+    catch(_){DB.ui.misPedidos=null;DB.ui.misMsg="No pudimos consultar en este momento. Intenta de nuevo o escríbenos por WhatsApp.";}
+    render();return;
+  }
+  if(d.misRepeat!==undefined){
+    const o=(DB.ui.misPedidos||[])[+d.misRepeat];if(!o)return;let n=0;
+    (o.items||[]).forEach(i=>{const c=colorById(i.colorId);if(!c||!c.active||c.avail==="agotado")return;const ex=DB.session.cart.find(x=>x.colorId===i.colorId&&x.size===i.size);if(ex)ex.qty+=+i.qty;else DB.session.cart.push({colorId:i.colorId,size:i.size,qty:+i.qty,unit:c.prices[i.size]||+i.unit});n++;});
+    if(!n){toast("Esos colores ya no están disponibles en el catálogo",true);return;}
+    DB.ui.checkStep=2;go("/pedir");toast("Pedido cargado: revísalo y continúa");render();return;
+  }
   if(d.act!==undefined&&d.oid!==undefined){
     const o=DB.orders.find(x=>x.id===d.oid);
     if(d.act==="Cancelado"&&!confirmCancel())return;
@@ -2889,23 +2943,22 @@ document.addEventListener("click",async e=>{
     const o=DB.orders.find(x=>x.id===d.factOk);
     const input=document.querySelector(`[data-fact-no="${o.id}"]`);
     const discInput=document.querySelector(`[data-fact-disc="${o.id}"]`);
-    const num=(input&&input.value.trim());if(!num){toast("Escribe el número de factura que generó la macro",true);if(input)input.focus();return;}
+    const num=(input&&input.value.trim());if(!num){toast("Escribe el número de la factura",true);if(input)input.focus();return;}
     const disc=Math.min(Math.max(0,parseInt(discInput&&discInput.value)||0), orderTotals(o).total);
     o.discount=disc;
-    o.invoice={number:num,at:new Date().toISOString(),externalId:"macro-excel"};
-    DB.invoiceSeq++;o.invoiceState="Facturada";o.state="Facturado";
-    pushHistory(o,"Factura registrada: "+num+" (macro Excel)"+(disc?` · Descuento aplicado: ${money(disc)}`:""),DB.admin.user);
-    toast("Factura "+num+" asociada al pedido "+o.number+(disc?` · descuento ${money(disc)}`:""));render();return;
+    o.invoice={number:num,at:new Date().toISOString(),externalId:"manual"};
+    DB.invoiceSeq++;o.invoiceState="Facturada";o.state="Listo para despacho";
+    pushHistory(o,"Factura registrada: "+num+(disc?` · Descuento aplicado: ${money(disc)}`:"")+" — pasa a despacho",DB.admin.user);
+    toast("Factura "+num+" registrada para "+o.number+" → pasa a Despacho y a la Orden de trabajo");render();return;
   }
   if(d.dispatch!==undefined){
     const o=DB.orders.find(x=>x.id===d.dispatch);
-    const guide=(document.querySelector(`[data-d-guide="${o.id}"]`)?.value||"").trim();
-    if(!guide){toast("Ingresa el número de guía",true);return;}
+    const guide=(document.querySelector(`[data-d-guide="${o.id}"]`)?.value||"").trim()||"Pendiente";
     const carrier=document.querySelector(`[data-d-carrier="${o.id}"]`)?.value||"Coordinadora Mercantil";
     const by=document.querySelector(`[data-d-by="${o.id}"]`)?.value||DB.admin.user;
     o.dispatch={carrier,guide,at:new Date().toISOString(),by,payMode:"Contraentrega"};
     o.state="Despachado";pushHistory(o,"Despachado — "+carrier+", guía "+guide,by);
-    toast("Despacho registrado: guía "+guide);render();return;
+    toast(guide==="Pendiente"?"Despacho registrado — agrega el número de guía cuando lo tengas (En camino)":"Despacho registrado: guía "+guide);render();return;
   }
   if(d.clientCredit!==undefined){
     const cl=DB.clients.find(c=>c.id===d.clientCredit);
@@ -2961,7 +3014,7 @@ document.addEventListener("click",async e=>{
   if(d.colBack!==undefined){DB.ui.colEdit=null;render();return;}
   if(d.colMore!==undefined){DB.ui.colLimit=(DB.ui.colLimit||40)+40;render();return;}
   if(d.colSave!==undefined){saveColor(d.colSave);return;}
-  if(d.colDel!==undefined){const c=colorById(d.colDel);c.active=!c.active;toast(c.active?"Color reactivado":"Color desactivado — ya no aparece en el catálogo");DB.ui.colEdit=null;render();return;}
+  if(d.colDel!==undefined){const c=colorById(d.colDel);c.active=!c.active;guardarColor(c,c.active?"Color reactivado":"Color desactivado — ya no aparece en el catálogo");DB.ui.colEdit=null;render();return;}
   if(d.applyBase!==undefined){
     let follaje=FOLLAJE_PRICE;
     document.querySelectorAll("[data-pt]").forEach(inp=>{
@@ -2970,11 +3023,11 @@ document.addEventListener("click",async e=>{
       else PRICE_TABLE[s][p]=+inp.value||0;
     });
     FOLLAJE_PRICE=follaje;
-    DB.colors.forEach(c=>{
-      if(c.group==="Foliage"){c.prices={"Follaje":follaje};}
-      else c.prices=Object.fromEntries(SIZES.map(s=>[s,PRICE_TABLE[s][c.process||"fuerte"]]));
-    });
-    toast("Precios 2026 aplicados a todo el catálogo");render();return;
+    const custom=DB.colors.filter(c=>c._customPrices);
+    DB.colors.forEach(c=>{c._customPrices=false;c.prices=stdPrices(c);});
+    sbSaveCatalogo("_precios",{PRICE_TABLE,FOLLAJE_PRICE}).then(ok=>{if(ok)toast("Precios aplicados a todo el catálogo y guardados en la base de datos");});
+    custom.forEach(c=>sbSaveCatalogo(c.id,colorDatos(c)));
+    render();return;
   }
   if(d.cityAdd!==undefined){DB.cities.push({city:"",dept:"",days:""});render();return;}
   if(d.cityRm!==undefined){DB.cities.splice(+d.cityRm,1);toast("Ciudad eliminada");render();return;}
@@ -3100,46 +3153,21 @@ function bindAfterRender(){
         const f=inp.closest(".field");const bad=!inp.value.trim();
         f.classList.toggle("invalid",bad);if(bad)ok=false;
       });
-      if(!ok){toast("Revisa los campos marcados",true);window.scrollTo({top:0,behavior:"smooth"});return;}
+      const fecha=$("#s_date").value;
+      if(!validDispatchDate(fecha)){$("#s_date").closest(".field").classList.add("invalid");ok=false;}
+      if(!ok){toast(validDispatchDate(fecha)?"Revisa los campos marcados":"Elige un día hábil de despacho (lunes a viernes, no festivo, desde "+fmtDia(minDispatchDate())+")",true);window.scrollTo({top:0,behavior:"smooth"});return;}
       DB.session.customer={name:$("#c_name").value,contact:$("#c_contact").value,phone:$("#c_phone").value,wa:$("#c_wa").value,email:$("#c_email").value,doctype:$("#c_doctype").value,doc:$("#c_doc").value,type:$("#c_type").value};
-      DB.session.shipping={city:$("#s_city").value,dept:$("#s_dept").value,address:$("#s_addr").value,barrio:$("#s_barrio").value,receiver:$("#s_recv").value,receiverPhone:$("#s_rphone").value,notes:$("#s_notes").value};
+      DB.session.shipping={city:$("#s_city").value,dept:$("#s_dept").value,address:$("#s_addr").value,barrio:$("#s_barrio").value,receiver:$("#s_recv").value,receiverPhone:$("#s_rphone").value,notes:$("#s_notes").value,dispatchDate:fecha};
       DB.session.billing={kind:df.querySelector("[name=bkind]:checked").value,name:$("#b_name").value,doctype:$("#b_doctype").value,doc:$("#b_doc").value,email:$("#b_email").value,address:$("#b_addr").value,city:$("#b_city").value,dept:$("#b_dept").value};
       try{localStorage.setItem("si_perfil",JSON.stringify({customer:DB.session.customer,shipping:DB.session.shipping,billing:DB.session.billing}));}catch(_){}
       DB.session._perfil=false;
       saveLead(4);
-      DB.ui.checkStep=4;render();window.scrollTo(0,0);
+      const sb=df.querySelector("[type=submit]");if(sb){sb.disabled=true;sb.textContent="Enviando pedido…";}
+      submitOrder();
     });
     df.querySelectorAll("[name=bkind]").forEach(r=>r.addEventListener("change",()=>{
       df.querySelectorAll(".radio-cards .radio-card").forEach(c=>c.classList.toggle("on",c.querySelector("input").checked));
     }));
-  }
-
-  const uz=$("#uploadZone");
-  if(uz){
-    const inp=$("#receiptInput");
-    uz.addEventListener("click",e=>{if(!e.target.closest("[data-rm-receipt]"))inp.click();});
-    uz.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();inp.click();}});
-    inp.addEventListener("change",()=>{
-      const f=inp.files[0];if(!f)return;
-      if(!/\.(jpe?g|png|pdf)$/i.test(f.name)){toast("Solo se aceptan archivos JPG, PNG o PDF",true);return;}
-      const rec={name:f.name,type:f.type,dataUrl:null};
-      if(f.type.startsWith("image")&&f.size<8_000_000){
-        const rd=new FileReader();
-        rd.onload=()=>{
-          const img=new Image();
-          img.onload=()=>{
-            const MAX=1400, k=Math.min(1,MAX/Math.max(img.width,img.height));
-            const cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
-            cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
-            rec.dataUrl=cv.toDataURL("image/jpeg",0.72);rec.type="image/jpeg";
-            DB.session.receipt=rec;render();
-          };
-          img.onerror=()=>{rec.dataUrl=rd.result;DB.session.receipt=rec;render();};
-          img.src=rd.result;
-        };
-        rd.readAsDataURL(f);
-      } else {DB.session.receipt=rec;render();}
-    });
   }
 
   // Vista previa en edición de color
@@ -3158,8 +3186,10 @@ function saveColor(id){
     prices:Object.fromEntries(SIZES.map(s=>[s,+get("ce_p_"+s.replace(/[^a-z]/gi,"")).value||0]))
   };
   if(!data.name){toast("El color necesita un nombre",true);return;}
-  if(id==="new"){DB.colors.push({id:"c"+(DB.colors.length+1)+"n",...data});toast("Color creado: "+data.name);}
-  else{Object.assign(colorById(id),data);toast("Color actualizado: "+data.name);}
+  if(data.group==="Foliage")data.prices=id==="new"?{"Follaje":FOLLAJE_PRICE}:(colorById(id).prices||{"Follaje":FOLLAJE_PRICE});
+  let c;
+  if(id==="new"){c={id:"n"+Date.now().toString(36),...data};DB.colors.push(c);guardarColor(c,"Color creado: "+data.name);}
+  else{c=colorById(id);Object.assign(c,data);guardarColor(c,"Color actualizado: "+data.name);}
   DB.ui.colEdit=null;render();
 }
 
@@ -3168,14 +3198,14 @@ async function submitOrder(){
   const s=DB.session;
   if(!s.cart.length){toast("Tu pedido está vacío",true);return;}
   if(!s.customer||!s.shipping||!s.billing){toast("Completa primero tus datos",true);DB.ui.checkStep=3;render();return;}
-  const credito=s.payMode==="credito"&&isCreditClient(s.customer.name);
-  if(!credito&&!s.receipt){toast("Sube el comprobante de pago",true);return;}
+  if(!validDispatchDate(s.shipping.dispatchDate)){toast("Elige el día de despacho",true);DB.ui.checkStep=3;render();return;}
+  const credito=isCreditClient(s.customer.name);
   const btn=document.querySelector("[data-submit-order]");
   if(btn){btn.disabled=true;btn.textContent="Enviando pedido…";}
   const t=cartTotals();
   const o=createOrder({
     client:{...s.customer},shipping:{...s.shipping},billing:{...s.billing},
-    items:s.cart.map(i=>{const c=colorById(i.colorId);return {...i,name:c?c.name:i.colorId,code:c&&c.code?c.code:""};}),receipt:credito?null:{...s.receipt},
+    items:s.cart.map(i=>{const c=colorById(i.colorId);return {...i,name:c?c.name:i.colorId,code:c&&c.code?c.code:""};}),receipt:null,
     payMode:credito?"credito":"transferencia",
     charges:{recargo:t.recargo,conservante:t.conserv,caja:t.caja}
   });
@@ -3190,7 +3220,7 @@ async function submitOrder(){
   completeLead();
   DB.ui.lastOrder=o;
   s.cart=[];s.receipt=null;s.payMode=null;
-  DB.ui.checkStep=5;
+  DB.ui.checkStep=4;
   render();window.scrollTo(0,0);
 }
 
@@ -3198,6 +3228,7 @@ async function submitOrder(){
 $("#menuToggle").addEventListener("click",()=>$("#mainNav").classList.toggle("open"));
 initPhotos();
 render();
+sbLoadCatalogo().then(()=>render());
 </script>
 </body>
 </html>
