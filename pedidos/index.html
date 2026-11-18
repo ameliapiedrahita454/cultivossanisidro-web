@@ -264,6 +264,23 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14.5px}
 .field .err{font-size:12px;color:var(--danger);display:none}
 .field.invalid input,.field.invalid select{border-color:var(--danger)}
 .field.invalid .err{display:block}
+.dp{border:1px solid var(--line);background:var(--paper);padding:12px 14px;max-width:420px}
+.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:15px;color:var(--ink)}
+.dp-nav{border:1px solid var(--line);background:#fff;width:34px;height:34px;font-size:20px;line-height:1;cursor:pointer;color:var(--ink);padding:0}
+.dp-nav:disabled{opacity:.3;cursor:default}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dp-wd{font-size:11px;font-weight:700;color:var(--ink-faint);text-align:center;padding:4px 0}
+.dp-cell{display:flex;align-items:center;justify-content:center;height:38px;font-size:14px;border-radius:999px;font-family:inherit}
+.dp-day{border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font-weight:600;padding:0}
+.dp-day:hover{border-color:var(--forest);color:var(--forest)}
+.dp-sel,.dp-sel:hover{background:var(--forest);color:#fff;border-color:var(--forest)}
+.dp-off{color:#C4C0B6;text-decoration:line-through;cursor:not-allowed}
+.dp-fest{color:#C46A6A;background:#FBECEC;text-decoration:line-through}
+.dp-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-faint);margin-top:10px}
+.dp-sw{display:inline-block;width:12px;height:12px;border-radius:999px;vertical-align:-1px;margin-right:4px;border:1px solid var(--line)}
+.dp-sw-ok{background:#fff}.dp-sw-off{background:#E8E5DD}.dp-sw-fest{background:#FBECEC;border-color:#C46A6A}
+.dp-sel-txt{margin:10px 0 0;font-size:14px;color:var(--ink)}
+.field.invalid .dp{border-color:var(--danger)}
 .radio-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .radio-card{border:1px solid var(--line);border-radius:0;padding:14px;display:flex;gap:10px;align-items:center;cursor:pointer;background:var(--paper)}
 .radio-card.on{border-color:var(--forest);background:var(--sage-pale)}
@@ -1014,6 +1031,35 @@ function minDispatchDate(){
 }
 function validDispatchDate(s){const d=parseISODay(s);return !!d&&isBusinessDay(d)&&s>=minDispatchDate();}
 function fmtDia(s){const d=parseISODay(s);if(!d)return "";const t=d.toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"}).replace(",","");return t.charAt(0).toUpperCase()+t.slice(1);}
+/* ---------- Calendario de despacho: solo días hábiles (sin sábados, domingos ni festivos) ---------- */
+const DP_DIAS_MAX=60;
+function dpMonthShown(sel){
+  const min=parseISODay(minDispatchDate());const s=parseISODay(sel)||min;
+  const minM=new Date(min.getFullYear(),min.getMonth(),1);const lim=new Date(min);lim.setDate(lim.getDate()+DP_DIAS_MAX);const maxM=new Date(lim.getFullYear(),lim.getMonth(),1);
+  let m=DB.ui.dpMonth?parseISODay(DB.ui.dpMonth+"-01"):new Date(s.getFullYear(),s.getMonth(),1);
+  if(!m||m<minM)m=minM;if(m>maxM)m=maxM;return m;
+}
+function dpHTML(sel){
+  const min=parseISODay(minDispatchDate());const lim=new Date(min);lim.setDate(lim.getDate()+DP_DIAS_MAX);
+  const first=dpMonthShown(sel);
+  const minM=new Date(min.getFullYear(),min.getMonth(),1);const maxM=new Date(lim.getFullYear(),lim.getMonth(),1);
+  const hol=colHolidays(first.getFullYear());const hoy=isoLocal(bogotaNow());
+  const title=first.toLocaleDateString("es-CO",{month:"long",year:"numeric"});
+  let cells="";for(let i=0;i<(first.getDay()+6)%7;i++)cells+='<span class="dp-cell"></span>';
+  const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();
+  for(let d=1;d<=days;d++){
+    const dt=new Date(first.getFullYear(),first.getMonth(),d);const iso=isoLocal(dt);const w=dt.getDay();
+    const fest=hol.has(iso),fin=w===0||w===6,pasado=dt<min,tarde=dt>lim;
+    if(!fest&&!fin&&!pasado&&!tarde){cells+=`<button type="button" class="dp-cell dp-day${iso===sel?" dp-sel":""}" data-dp-day="${iso}" aria-label="${fmtDia(iso)}">${d}</button>`;continue;}
+    const why=fest?"Festivo en Colombia: no despachamos":fin?"Fin de semana: no despachamos":pasado?(iso===hoy?"Hoy ya no: los pedidos de hoy se reciben hasta las 10:00 a. m.":"Ya pasó"):"Muy lejos: elige una fecha más cercana";
+    cells+=`<span class="dp-cell dp-off${fest?" dp-fest":""}" title="${why}">${d}</span>`;
+  }
+  return `<div class="dp-head"><button type="button" class="dp-nav" data-dp-nav="-1"${first>minM?"":" disabled"} aria-label="Mes anterior">‹</button><b>${title.charAt(0).toUpperCase()+title.slice(1)}</b><button type="button" class="dp-nav" data-dp-nav="1"${first<maxM?"":" disabled"} aria-label="Mes siguiente">›</button></div>
+  <div class="dp-grid">${["L","M","M","J","V","S","D"].map(x=>`<span class="dp-wd">${x}</span>`).join("")}${cells}</div>
+  <div class="dp-leg"><span><i class="dp-sw dp-sw-ok"></i> Día hábil</span><span><i class="dp-sw dp-sw-off"></i> Sábado y domingo</span><span><i class="dp-sw dp-sw-fest"></i> Festivo</span></div>
+  <p class="dp-sel-txt">Día de despacho elegido: <b>${sel&&validDispatchDate(sel)?fmtDia(sel):"ninguno todavía"}</b></p>`;
+}
+function dpRefresh(){const box=document.getElementById("s_date_dp");const inp=$("#s_date");if(box)box.innerHTML=dpHTML(inp?inp.value:"");}
 function dispatchText(o){const f=o.shipping&&o.shipping.dispatchDate;if(f)return fmtDia(f);return o.dispatchRule&&o.dispatchRule.sameDay?"Mismo día (regla anterior)":"Día siguiente hábil (regla anterior)";}
 function clientStateLabel(estado,guia){const g=guia&&guia!=="Pendiente"&&guia!=="Por asignar"?guia:null;
   return {"Pedido recibido":"Revisando disponibilidad","Pago por verificar":"Disponibilidad confirmada · esperando tu pago","Pago confirmado":"Pago recibido · en preparación","Pendiente de facturación":"Pago recibido · en preparación","Facturado":"Facturado · en preparación","En preparación":"En preparación","Listo para despacho":"Listo para despacho","Despachado":"Despachado"+(g?" · guía "+g:""),"En tránsito":"En camino"+(g?" · guía "+g:""),"Entregado":"Entregado","Cancelado":"Cancelado"}[estado]||estado;}
@@ -1763,7 +1809,7 @@ function viewDatos(){
   <fieldset class="fs"><legend>Datos de envío</legend>
     <p class="fs-sub">Los tiempos de entrega varían según la ciudad de destino. <a href="#/tiempos">Ver tiempos por ciudad</a>.</p>
     <div class="form-grid">
-      <div class="field full" data-f="s_date"><label for="s_date">¿Qué día quieres que despachemos tus flores? <span class="req">*</span></label><input id="s_date" type="date" required min="${minDispatchDate()}" value="${esc(sh.dispatchDate&&validDispatchDate(sh.dispatchDate)?sh.dispatchDate:minDispatchDate())}"><span class="err">Elige un día hábil: de lunes a viernes y que no sea festivo</span><p class="fs-sub" style="margin:6px 0 0">Despachamos de <b>lunes a viernes</b> (no festivos). Lo más pronto: <b>${fmtDia(minDispatchDate())}</b>${minDispatchDate()===isoLocal(bogotaNow())?" (pedidos antes de las 10:00 a. m. salen hoy)":""}. La transportadora entrega según tu ciudad.</p></div>
+      <div class="field full" data-f="s_date"><label>¿Qué día quieres que despachemos tus flores? <span class="req">*</span></label><input id="s_date" type="hidden" required value="${esc(sh.dispatchDate&&validDispatchDate(sh.dispatchDate)?sh.dispatchDate:minDispatchDate())}"><div class="dp" id="s_date_dp">${dpHTML(sh.dispatchDate&&validDispatchDate(sh.dispatchDate)?sh.dispatchDate:minDispatchDate())}</div><span class="err">Elige un día hábil: de lunes a viernes y que no sea festivo</span><p class="fs-sub" style="margin:6px 0 0">Despachamos de <b>lunes a viernes</b>: los sábados, domingos y festivos de Colombia aparecen apagados y no se pueden elegir. Lo más pronto: <b>${fmtDia(minDispatchDate())}</b>${minDispatchDate()===isoLocal(bogotaNow())?" (pedidos antes de las 10:00 a. m. salen hoy)":""}. La transportadora entrega según tu ciudad.</p></div>
       ${fld("s_city","Ciudad",1,{value:sh.city})}
       ${fld("s_dept","Departamento",1,{value:sh.dept})}
       ${fld("s_addr","Dirección",1,{value:sh.address,full:1})}
@@ -1941,7 +1987,7 @@ function viewMisPedidos(){
       <thead><tr><th>Pedido</th><th>Fecha</th><th>Productos</th><th class="num">Tallos</th><th class="num">Valor</th><th>Despacho</th><th>Guía Coordinadora</th><th>Estado</th><th></th></tr></thead>
       <tbody>${lista.map((o,ix)=>`<tr>
         <td style="white-space:nowrap"><b>${esc(o.numero)}</b></td><td style="white-space:nowrap">${fdate(o.created_at)}</td>
-        <td style="font-size:13px;max-width:230px">${(o.items||[]).map(i=>esc(i.name||i.colorId)+" · "+esc(i.size)+" × "+i.qty).join("<br>")}</td>
+        <td style="font-size:13px;white-space:nowrap">${(o.items||[]).map(i=>esc(i.name||i.colorId)+" · "+esc(i.size)+" × "+i.qty).join("<br>")}</td>
         <td class="num">${o.tallos||""}</td><td class="num"><b>${money(o.total||0)}</b></td>
         <td style="white-space:nowrap">${o.fecha_despacho?fmtDia(o.fecha_despacho):"—"}</td>
         <td>${o.guia&&o.guia!=="Pendiente"&&o.guia!=="Por asignar"?`<b>${esc(o.guia)}</b><br><a href="https://www.coordinadora.com/" target="_blank" rel="noopener" style="font-size:12px">Rastrear en coordinadora.com</a>`:(["Despachado","En tránsito"].includes(o.estado)?"<small>Pendiente de asignar</small>":"—")}</td>
@@ -2352,8 +2398,9 @@ function facturaHTML(o){
   const fila=(k,v,bold)=>`<tr><td ${th}>${k}</td><td ${tdr}><span style="font-size:${bold?"15px":"13px"};font-weight:${bold?"700":"400"}">${v}</span></td></tr>`;
   const obs=[`Pedido ${esc(o.number)} · despacho solicitado: ${esc(dispatchText(o))}`,o.dispatch&&o.dispatch.guide&&o.dispatch.guide!=="Pendiente"?`Guía Coordinadora: ${esc(o.dispatch.guide)}`:"",o.notes?esc(o.notes):""].filter(Boolean).join(" · ");
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${o.invoice?"Factura "+esc(num):"Cuenta de cobro "+esc(o.number)} - ${esc(b.name||c.name||"")}</title>
-<style>@page{size:letter;margin:14mm}body{font-family:"Courier New",Courier,monospace;color:#111;margin:0}table{border-collapse:collapse}.serif{font-family:Georgia,"Times New Roman",serif}@media print{.np{display:none}}</style></head><body>
-<div class="np" style="font-family:Arial;background:#F3EFE6;padding:10px 14px;margin-bottom:14px;border-radius:8px;font-size:13px">Para guardar como PDF: <b>Imprimir (Ctrl+P / ⌘P) → Destino: Guardar como PDF</b>. <button onclick="window.print()" style="padding:6px 12px;font-weight:700;cursor:pointer">🖨 Imprimir / Guardar PDF</button></div>
+<style>@page{size:letter;margin:14mm}body{font-family:"Courier New",Courier,monospace;color:#111;margin:0}table{border-collapse:collapse}.serif{font-family:Georgia,"Times New Roman",serif}@media print{.np{display:none}}#doc:focus{outline:none}@media screen{#doc [contenteditable],#doc{cursor:text}}</style></head><body>
+<div class="np" style="font-family:Arial;background:#F3EFE6;padding:10px 14px;margin-bottom:14px;border-radius:8px;font-size:13px"><b>¿Algo por corregir?</b> Haz clic sobre cualquier dato de la factura y escribe encima (solo cambia este PDF, no el pedido del portal). Para guardar: <b>Imprimir (Ctrl+P / ⌘P) → Destino: Guardar como PDF</b>. <button onclick="window.print()" style="padding:6px 12px;font-weight:700;cursor:pointer">🖨 Imprimir / Guardar PDF</button></div>
+<div id="doc" contenteditable="true" spellcheck="false">
 <table style="width:100%"><tr><td style="vertical-align:top;width:60%"><div class="serif" style="font-size:34px;letter-spacing:1px">D<span style="font-size:26px">ANIEL</span> P<span style="font-size:26px">IEDRAHITA</span></div><div style="font-size:14px;font-weight:700;margin-top:4px">NIT: &nbsp; 70.555.275</div></td>
 <td style="vertical-align:top"><table style="width:100%">
 ${fila(titulo,o.invoice?`<b style="color:#1a56c4;font-size:20px">${esc(num)}</b>`:`<b style="font-size:16px">${esc(o.number)}</b>`)}
@@ -2373,7 +2420,7 @@ ${(o.abonos||[]).length?`<div style="font-weight:700;font-size:13px;margin-top:1
 ${fila("SUB TOTAL",money(t.sub+t.recargo+t.conserv+t.caja),true)}${fila('<span style="color:#c22">DESCUENTO</span>',t.descuento?money(t.descuento):"")}${fila("VALOR BASE",money(t.sub+t.recargo+t.conserv+t.caja-t.descuento))}${fila("IVA","")}${fila("TRANSPORTE",t.transporte?money(t.transporte):"")}${fila("RETENCIONES","")}${fila("TOTAL A PAGAR",money(t.total),true)}
 ${(o.abonos||[]).length?fila("TOTAL ABONOS",money(t.abonado))+fila("SALDO A PAGAR",money(t.saldo),true):""}
 </table></td></tr></table>
-</body></html>`;
+</div></body></html>`;
 }
 function abrirFacturaPDF(oid){
   const o=DB.orders.find(x=>x.id===oid);if(!o)return;
@@ -2401,7 +2448,7 @@ function adFact(){
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b style="font-size:17px">${o.number}</b><b style="color:var(--forest)">${money(t.total)}</b></div>
       <p style="font-size:14px;color:var(--ink-soft);margin:4px 0 12px"><b>${esc(o.billing.name||o.client.name)}</b> · ${esc(((o.billing.doctype||"")+" "+(o.billing.doc||"")).trim())}<br>${t.stems} tallos · ${o.items.length} color${o.items.length!==1?"es":""} · ${esc(o.shipping.city)}</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
-        <div class="field" style="margin:0"><label>Nº de factura</label><input placeholder="Ej: FSI-00120" data-fact-no="${o.id}" style="width:160px"></div>
+        <div class="field" style="margin:0"><label>Nº de factura</label><input placeholder="Ej: 8931" data-fact-no="${o.id}" style="width:160px"></div>
         <div class="field" style="margin:0"><label>Descuento ($)</label><input type="number" min="0" step="1000" placeholder="0" data-fact-disc="${o.id}" style="width:110px;text-align:right"></div>
         <div class="field" style="margin:0"><label>Transporte cobrado ($)</label><input type="number" min="0" step="1000" placeholder="0" value="${o.charges&&o.charges.transporte?o.charges.transporte:""}" data-fact-trans="${o.id}" style="width:120px;text-align:right"></div>
       </div>
@@ -2857,7 +2904,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-factura-pdf],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-dp-day],[data-dp-nav],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-factura-pdf],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2878,6 +2925,8 @@ document.addEventListener("click",async e=>{
   }
   if(d.clearDatos!==undefined){DB.session.customer=null;DB.session.shipping=null;DB.session.billing=null;DB.session._perfil=false;try{localStorage.removeItem("si_perfil")}catch(_){}render();window.scrollTo(0,0);return;}
   if(d.gotoCart!==undefined){DB.ui.checkStep=2;go("/pedir");render();window.scrollTo(0,0);return;}
+  if(d.dpDay!==undefined){if(!validDispatchDate(d.dpDay))return;const inp=$("#s_date");if(inp)inp.value=d.dpDay;DB.session.shipping=Object.assign(DB.session.shipping||{},{dispatchDate:d.dpDay});const f=t.closest(".field");if(f)f.classList.remove("invalid");dpRefresh();return;}
+  if(d.dpNav!==undefined){const m=dpMonthShown(($("#s_date")||{}).value);m.setMonth(m.getMonth()+(+d.dpNav));DB.ui.dpMonth=isoLocal(m).slice(0,7);dpRefresh();return;}
   if(d.step!==undefined){DB.ui.checkStep=+d.step;track("checkout_step",{step:+d.step});go("/pedir");render();window.scrollTo(0,0);return;}
   if(d.fam!==undefined){DB.ui.cat=d.fam;DB.ui.group="";render();return;}
   if(d.clearSearch!==undefined){DB.ui.query="";DB.ui.cat="";DB.ui.group="";render();return;}
