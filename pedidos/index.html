@@ -241,6 +241,23 @@ nav.main a.active{color:var(--forest);border-bottom:1px solid var(--gold)}
 .cart-bar .tot b{display:block;font-size:17px;color:#fff}
 .cart-bar .btn-hydr{background:var(--paper);color:var(--forest-deep);border:1px solid var(--paper);font-weight:500;flex-shrink:0}
 .cart-bar .btn-hydr:hover{background:#fff}
+.cart-bar .btn-next{background:#9EE2BE;color:var(--forest-deep);border:2px solid #9EE2BE;font-weight:800;font-size:16px;padding:14px 22px;border-radius:999px;flex-shrink:0;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.25);animation:ctaPulse 2.2s ease-in-out infinite}
+.cart-bar .btn-next:hover{background:#B9F0D2;border-color:#B9F0D2}
+@keyframes ctaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.cart-bar .hint{display:none}
+@media(max-width:720px){
+  .cart-bar-inner{flex-wrap:wrap;gap:8px 12px;padding:10px 4px 12px}
+  .cart-bar .ct{font-size:13px;flex:1}
+  .cart-bar .ct b{font-size:14px}
+  .cart-bar .tot{font-size:12px}
+  .cart-bar .tot b{font-size:16px}
+  .cart-bar .btn-next{flex-basis:100%;width:100%;font-size:17px;padding:16px 18px;text-align:center}
+  .cart-bar .hint{display:block;flex-basis:100%;text-align:center;font-size:12.5px;color:#BFB79F;margin-top:-2px}
+}
+.next-big{margin-top:14px}
+.next-big .btn{width:100%;justify-content:center;font-size:17px;padding:17px 20px;background:#9EE2BE;color:var(--forest-deep);border:2px solid #9EE2BE;font-weight:800;border-radius:999px}
+.next-big .btn:hover{background:#B9F0D2}
+.next-big p{text-align:center;font-size:13px;color:var(--ink-faint);margin:8px 0 0}
 body.has-cartbar{padding-bottom:76px}
 
 /* ---------- Tablas ---------- */
@@ -1749,7 +1766,7 @@ function renderCartBar(){
   /* la barra acompaña mientras se eligen flores; en datos, pago y confirmación se oculta para no tapar los botones del paso */
   const show=t.lines>0 && !route().startsWith("/admin") && !(onPedir && step>=3);
   document.body.classList.toggle("has-cartbar",show);
-  const action=(onPedir&&step===2)?`<button class="btn btn-hydr btn-sm" data-step="3">Continuar con los datos →</button>`:`<button class="btn btn-hydr btn-sm" data-goto-cart>Revisar pedido →</button>`;
+  const action=(onPedir&&step===2)?`<button class="btn btn-next" data-step="3">Siguiente: escribir mis datos →</button><span class="hint">Toca el botón verde para seguir con tu pedido</span>`:`<button class="btn btn-next" data-goto-cart>Ver mi pedido y continuar →</button><span class="hint">Cuando termines de elegir, toca el botón verde</span>`;
   root.innerHTML=show?`<div class="cart-bar"><div class="cart-bar-inner">
     <span class="ct"><b>Mi pedido</b> · ${t.lines} producto${t.lines!==1?"s":""} · ${t.stems} tallos</span>
     <span class="tot">Total<b>${money(t.total)}</b></span>
@@ -1785,6 +1802,7 @@ function viewCart(){
     ${t.conserv?`<div style="display:flex;justify-content:space-between;font-size:14.5px;padding:3px 0"><span>Conservante/Comida (${t.comidaUnits} × ${money(CONSERVANTE)})</span><b>${money(t.conserv)}</b></div>`:""}
     <div style="display:flex;justify-content:space-between;font-size:17px;padding-top:8px;border-top:1.5px solid var(--line);color:var(--forest)"><span><b>Total</b></span><b>${money(t.total)}</b></div>
   </div>
+  <div class="next-big"><button class="btn" data-step="3">Siguiente: escribir mis datos →</button><p>Paso 3 de 4 · Todavía no pagas: primero confirmamos disponibilidad por WhatsApp.</p></div>
   <div class="cond-tiles" aria-label="Condiciones del pedido">
     <div class="cond-tile"><span class="cond-ico">10</span><b>Pedido mínimo</b><p><b>${MIN_TALLOS_COLOR} tallos</b> por color. Con 20 o más tallos por caja no hay recargo.</p></div>
     <div class="cond-tile"><span class="cond-ico">▢</span><b>Cajas</b><p>Cada color viaja en su propia caja. Cargo de <b>${money(CAJA_CHARGE)}</b> por caja.</p></div>
@@ -1794,7 +1812,7 @@ function viewCart(){
   <div class="note blue" style="margin:18px 0 0"><b>¿Cómo se paga?</b> Al enviar el pedido <b>todavía no pagas</b>. Primero revisamos que tengamos tus flores disponibles y te confirmamos por WhatsApp; solo cuando recibas esa confirmación haces la transferencia y nos envías el comprobante por WhatsApp. Si eres cliente con crédito, tu pedido queda a crédito.</div>
   <div class="action-row" style="justify-content:space-between">
     <button class="btn btn-ghost" data-step="1">← Seguir agregando colores</button>
-    <button class="btn btn-primary btn-lg" data-step="3">Continuar con los datos →</button>
+    <button class="btn btn-primary btn-lg" data-step="3">Siguiente: escribir mis datos →</button>
   </div>`;
 }
 
@@ -1891,6 +1909,7 @@ function viewConfirm(){
     <p style="color:var(--ink-faint);margin-top:8px;letter-spacing:.12em;text-transform:uppercase;font-size:12px">Número de pedido</p>
     <div class="order-no">${o.number}</div>
     <span class="badge st-recibido" style="font-size:13px">Revisando disponibilidad</span>
+    <p style="font-size:18px;font-weight:600;line-height:1.55;color:var(--forest);max-width:600px;margin:22px auto 0">Gracias por confiar en San Isidro. Sabemos que tus clientes esperan lo mejor; por eso cada tallo se selecciona a mano para que tu negocio brille. Nos vemos en el próximo pedido 🌸</p>
     ${o.payMode==="credito"
       ?`<p class="lead" style="margin:22px auto 0;max-width:600px">Nuestro equipo revisa la disponibilidad de las flores y te <b>confirma por WhatsApp</b>${tel?` al <b>${esc(tel)}</b>`:""}. Tu pedido queda <b>a crédito</b> según tu acuerdo comercial, y pasa a facturación y preparación una vez confirmado.</p>`
       :`<p class="lead" style="margin:22px auto 0;max-width:600px">Nuestro equipo revisa la disponibilidad de las flores y te <b>confirma por WhatsApp</b>${tel?` al <b>${esc(tel)}</b>`:""}. <b>Todavía no pagues:</b> cuando recibas la confirmación, haces la transferencia y nos envías el comprobante por WhatsApp.</p>`}
@@ -2877,7 +2896,8 @@ function adPrecios(){
       <tr><td><b>Follaje</b></td><td>1 tallo pintado</td><td class="num">${PACK["Follaje"]}</td><td class="num">—</td><td class="num">—</td>
         <td class="num"><input type="number" min="0" step="100" data-pt="Follaje|fuerte" value="${FOLLAJE_PRICE}" style="width:90px;padding:7px;border:1.5px solid var(--line);border-radius:8px;text-align:right"></td></tr>
       </tbody></table></div>
-    <button class="btn btn-primary" style="margin-top:16px" data-apply-base>Aplicar precios a todo el catálogo</button>
+    ${(()=>{const n=DB.colors.filter(c=>c._customPrices).length;return `<label style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:13.5px;color:var(--ink-soft)"><input type="checkbox" data-pt-override style="margin-top:3px"> <span>Reemplazar también los <b>${n} color${n===1?"":"es"} con precio especial</b> puesto uno por uno en Colores (si no marcas esto, esos se conservan).</span></label>`;})()}
+    <button class="btn btn-primary" style="margin-top:12px" data-apply-base>Aplicar precios a todo el catálogo</button>
   </div>
   <div class="card card-pad">
     <h4 style="font-family:var(--serif);font-size:19px;color:var(--forest);margin-bottom:10px">Reglas comerciales</h4>
@@ -3254,10 +3274,11 @@ document.addEventListener("click",async e=>{
       else PRICE_TABLE[s][p]=+inp.value||0;
     });
     FOLLAJE_PRICE=follaje;
+    const override=!!(document.querySelector("[data-pt-override]")||{}).checked;
     const custom=DB.colors.filter(c=>c._customPrices);
-    DB.colors.forEach(c=>{c._customPrices=false;c.prices=stdPrices(c);});
-    sbSaveCatalogo("_precios",{PRICE_TABLE,FOLLAJE_PRICE}).then(ok=>{if(ok)toast("Precios aplicados a todo el catálogo y guardados en la base de datos");});
-    custom.forEach(c=>sbSaveCatalogo(c.id,colorDatos(c)));
+    DB.colors.forEach(c=>{if(override||!c._customPrices){c._customPrices=false;c.prices=stdPrices(c);}});
+    sbSaveCatalogo("_precios",{PRICE_TABLE,FOLLAJE_PRICE}).then(ok=>{if(ok)toast(override||!custom.length?"Precios aplicados a todo el catálogo y guardados en la base de datos":"Precios aplicados · se conservaron "+custom.length+" color"+(custom.length===1?"":"es")+" con precio especial");});
+    if(override)custom.forEach(c=>sbSaveCatalogo(c.id,colorDatos(c)));
     render();return;
   }
   if(d.cityAdd!==undefined){DB.cities.push({city:"",dept:"",days:""});render();return;}
