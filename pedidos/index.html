@@ -279,6 +279,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14.5px}
 .dp-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-faint);margin-top:10px}
 .dp-sw{display:inline-block;width:12px;height:12px;border-radius:999px;vertical-align:-1px;margin-right:4px;border:1px solid var(--line)}
 .dp-sw-ok{background:#fff}.dp-sw-off{background:#E8E5DD}.dp-sw-fest{background:#FBECEC;border-color:#C46A6A}
+.dp-blk{background:#FFF1DC;color:#9A5B00;border-color:#E3B36A;text-decoration:line-through}.dp-day.dp-blk{text-decoration:none;font-weight:800}.dp-sw-blk{background:#FFF1DC;border-color:#E3B36A}
 .dp-sel-txt{margin:10px 0 0;font-size:14px;color:var(--ink)}
 .field.invalid .dp{border-color:var(--danger)}
 .radio-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -937,7 +938,7 @@ function isCreditClient(name){
 const AUTH_SALT="sanisidro-2026";
 const USERS={"lorenza": {"name": "Lorenza Piedrahita", "role": "admin", "h": "f561c589add698a472c0876eeacd234c9817e4ead1956f5fe9c76aafc5a77843"}, "amelia": {"name": "Amelia Piedrahita", "role": "admin", "h": "c12042b1026e5782821faaf313de7f2b12aacf31a2236eacb8aebd2a3f0230e0"}, "sandra": {"name": "Sandra Ríos", "role": "ventas", "h": "4dbae11f5ba60deb3db8eab8305ccb0308ba0b872151cca81329cffe9b68e3f4"}, "facturacion": {"name": "Facturación", "role": "fact", "h": "19709ca18349ecd32b1f5555f0bf14bf258233c35d403c6deb7359e4ebbb03e3"}, "sala": {"name": "Sala de preparación", "role": "sala", "h": "20bfcf06bb6d97d4c59b9a9c3a2c66dc0d1db83974e8095b04dbfd9ec489a7d9"}, "despacho": {"name": "Despacho", "role": "desp", "h": "94e67cdef0240a40173ea08ac0ebdcb1527afa007141253141fd54b62bf2a3b6"}};
 /* Todos los usuarios ven todas las secciones del panel. */
-const ALL_SECTIONS=["dash","guia","mes","pedidos","pend","fact","orden","desp","clientes","reclamos","colores","precios","ciudades","reportes","web"];
+const ALL_SECTIONS=["dash","guia","mes","pedidos","pend","fact","orden","desp","clientes","reclamos","colores","precios","ciudades","cierres","reportes","web"];
 const ROLES = {
   admin:{name:"Administrador",sections:ALL_SECTIONS},
   ventas:{name:"Ventas",sections:ALL_SECTIONS},
@@ -1021,7 +1022,12 @@ function colHolidays(y){
   _holCache[y]=s;return s;
 }
 function parseISODay(s){const[y,m,d]=String(s||"").split("-").map(Number);if(!y||!m||!d)return null;return new Date(y,m-1,d);}
-function isBusinessDay(d){const w=d.getDay();return w>=1&&w<=5&&!colHolidays(d.getFullYear()).has(isoLocal(d));}
+/* ---------- Días sin despacho: cierres fijos (24 y 31 de diciembre) + días bloqueados por ventas (tabla catalogo, fila _bloqueos) ---------- */
+const CIERRES_FIJOS=["12-24","12-31"];
+let BLOQUEOS=new Set();
+function esCierreFijo(iso){return CIERRES_FIJOS.includes(String(iso).slice(5));}
+function isBloqueado(iso){return esCierreFijo(iso)||BLOQUEOS.has(iso);}
+function isBusinessDay(d){const w=d.getDay();const iso=isoLocal(d);return w>=1&&w<=5&&!colHolidays(d.getFullYear()).has(iso)&&!isBloqueado(iso);}
 function bogotaNow(){try{return new Date(new Date().toLocaleString("en-US",{timeZone:"America/Bogota"}));}catch(_){return new Date();}}
 function minDispatchDate(){
   const now=bogotaNow();const d=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -1049,14 +1055,14 @@ function dpHTML(sel){
   const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();
   for(let d=1;d<=days;d++){
     const dt=new Date(first.getFullYear(),first.getMonth(),d);const iso=isoLocal(dt);const w=dt.getDay();
-    const fest=hol.has(iso),fin=w===0||w===6,pasado=dt<min,tarde=dt>lim;
-    if(!fest&&!fin&&!pasado&&!tarde){cells+=`<button type="button" class="dp-cell dp-day${iso===sel?" dp-sel":""}" data-dp-day="${iso}" aria-label="${fmtDia(iso)}">${d}</button>`;continue;}
-    const why=fest?"Festivo en Colombia: no despachamos":fin?"Fin de semana: no despachamos":pasado?(iso===hoy?"Hoy ya no: los pedidos de hoy se reciben hasta las 10:00 a. m.":"Ya pasó"):"Muy lejos: elige una fecha más cercana";
-    cells+=`<span class="dp-cell dp-off${fest?" dp-fest":""}" title="${why}">${d}</span>`;
+    const fest=hol.has(iso),fin=w===0||w===6,pasado=dt<min,tarde=dt>lim,blk=isBloqueado(iso);
+    if(!fest&&!fin&&!pasado&&!tarde&&!blk){cells+=`<button type="button" class="dp-cell dp-day${iso===sel?" dp-sel":""}" data-dp-day="${iso}" aria-label="${fmtDia(iso)}">${d}</button>`;continue;}
+    const why=fest?"Festivo en Colombia: no despachamos":fin?"Fin de semana: no despachamos":blk?"Ese día no despachamos":pasado?(iso===hoy?"Hoy ya no: los pedidos de hoy se reciben hasta las 10:00 a. m.":"Ya pasó"):"Muy lejos: elige una fecha más cercana";
+    cells+=`<span class="dp-cell dp-off${fest?" dp-fest":blk?" dp-blk":""}" title="${why}">${d}</span>`;
   }
   return `<div class="dp-head"><button type="button" class="dp-nav" data-dp-nav="-1"${first>minM?"":" disabled"} aria-label="Mes anterior">‹</button><b>${title.charAt(0).toUpperCase()+title.slice(1)}</b><button type="button" class="dp-nav" data-dp-nav="1"${first<maxM?"":" disabled"} aria-label="Mes siguiente">›</button></div>
   <div class="dp-grid">${["L","M","M","J","V","S","D"].map(x=>`<span class="dp-wd">${x}</span>`).join("")}${cells}</div>
-  <div class="dp-leg"><span><i class="dp-sw dp-sw-ok"></i> Día hábil</span><span><i class="dp-sw dp-sw-off"></i> Sábado y domingo</span><span><i class="dp-sw dp-sw-fest"></i> Festivo</span></div>
+  <div class="dp-leg"><span><i class="dp-sw dp-sw-ok"></i> Día hábil</span><span><i class="dp-sw dp-sw-off"></i> Sábado y domingo</span><span><i class="dp-sw dp-sw-fest"></i> Festivo</span><span><i class="dp-sw dp-sw-blk"></i> Sin despacho</span></div>
   <p class="dp-sel-txt">Día de despacho elegido: <b>${sel&&validDispatchDate(sel)?fmtDia(sel):"ninguno todavía"}</b></p>`;
 }
 function dpRefresh(){const box=document.getElementById("s_date_dp");const inp=$("#s_date");if(box)box.innerHTML=dpHTML(inp?inp.value:"");}
@@ -1257,10 +1263,11 @@ async function sbLoadCatalogo(){
     const r=await fetch(SB_URL+"/rest/v1/catalogo?select=id,datos",{headers:sbHeaders(false)});
     if(!r.ok)return;
     const rows=await r.json();
+    const bloq=rows.find(x=>x.id==="_bloqueos");if(bloq&&bloq.datos&&Array.isArray(bloq.datos.dias))BLOQUEOS=new Set(bloq.datos.dias);
     const precios=rows.find(x=>x.id==="_precios");
     if(precios&&precios.datos){const p=precios.datos;if(p.PRICE_TABLE)SIZES.forEach(s=>{if(p.PRICE_TABLE[s])Object.assign(PRICE_TABLE[s],p.PRICE_TABLE[s]);});if(p.FOLLAJE_PRICE)FOLLAJE_PRICE=+p.FOLLAJE_PRICE;}
     applyPriceTableToColors();
-    rows.filter(x=>x.id!=="_precios"&&x.datos).forEach(x=>{
+    rows.filter(x=>x.id!=="_precios"&&x.id!=="_bloqueos"&&x.datos).forEach(x=>{
       const d=x.datos;let c=colorById(x.id);
       if(!c){c={id:x.id,code:"",name:"",cat:"ton",group:"Otros",tone:["#EEEEEE","#DDDDDD"],avail:"disponible",active:true,process:"fuerte",prices:{}};DB.colors.push(c);}
       ["name","code","cat","group","tone","avail","active","process"].forEach(k=>{if(d[k]!==undefined)c[k]=d[k];});
@@ -1278,6 +1285,16 @@ async function sbSaveCatalogo(id,datos){
 function colorDatos(c){const custom=JSON.stringify(c.prices||{})!==JSON.stringify(stdPrices(c));c._customPrices=custom;return {name:c.name,code:c.code,cat:c.cat,group:c.group,tone:c.tone,avail:c.avail,active:c.active,process:c.process||"fuerte",prices:c.prices,customPrices:custom};}
 async function guardarColor(c,msg){const ok=await sbSaveCatalogo(c.id,colorDatos(c));if(ok)toast(msg+" — guardado en la base de datos");}
 let _sbKnown=new Set();
+/* Asocia un pedido a su cliente por correo o celular (crea el cliente si no existe) */
+function clientKey(c){return {e:String((c&&c.email)||"").trim().toLowerCase(),p:String((c&&(c.wa||c.phone))||"").replace(/\D/g,"").slice(-10)};}
+function linkClient(o){
+  const c=o.client||{};const k=clientKey(c);
+  let cl=DB.clients.find(x=>{const kk=clientKey(x);return (k.e&&kk.e===k.e)||(k.p&&k.p.length===10&&kk.p===k.p);});
+  if(!cl&&c.name)cl=DB.clients.find(x=>norm(x.name||"")===norm(c.name));
+  if(!cl){cl={id:"cl"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:c.name||"Cliente",contact:c.contact||"",phone:c.phone||"",wa:c.wa||"",email:c.email||"",doctype:c.doctype||"",doc:c.doc||"",type:c.type||"",city:(o.shipping&&o.shipping.city)||"",createdAt:o.createdAt||new Date().toISOString()};DB.clients.push(cl);}
+  else{["contact","phone","wa","email","doc","type"].forEach(f=>{if(!cl[f]&&c[f])cl[f]=c[f];});if(!cl.city&&o.shipping&&o.shipping.city)cl.city=o.shipping.city;}
+  o.clientId=cl.id;return cl;
+}
 async function sbFetchOrders(notify){
   if(!(await sbEnsure())) return;
   const r=await fetch(SB_URL+"/rest/v1/pedidos?select=*&order=created_at.desc&limit=500",{headers:sbHeaders(true)});
@@ -1288,7 +1305,7 @@ async function sbFetchOrders(notify){
     const local=DB.orders.find(x=>x.remoteId===row.id);
     if(!local){
       const o=row.datos||{};o.id=row.id;o.remoteId=row.id;o.state=row.estado;o.number=row.numero;o.client=o.client||{};o.shipping=o.shipping||{};o.billing=o.billing||{};o.dispatchRule=o.dispatchRule||{sameDay:false};o.invoiceState=o.invoiceState||"Pendiente de facturar";o.createdAt=o.createdAt||row.created_at;
-      o.history=o.history||[];o.items=o.items||[];
+      o.history=o.history||[];o.items=o.items||[];linkClient(o);
       DB.orders.push(o);changed=true;
       if(!_sbKnown.has(row.id)&&notify){
         news++;
@@ -1297,7 +1314,7 @@ async function sbFetchOrders(notify){
     } else if(!local._dirty){
       const remoto=row.datos||{};
       if(row.estado!==local.state||JSON.stringify(remoto.history||[]).length!==JSON.stringify(local.history||[]).length){
-        Object.assign(local,remoto);local.id=row.id;local.remoteId=row.id;local.state=row.estado;local.number=row.numero;changed=true;
+        Object.assign(local,remoto);local.id=row.id;local.remoteId=row.id;local.state=row.estado;local.number=row.numero;linkClient(local);changed=true;
       }
     }
     _sbKnown.add(row.id);
@@ -1347,6 +1364,22 @@ function waOrderMsg(o){
 /* ---------- Mensajes de WhatsApp que arma el panel para el cliente ---------- */
 function waPhone(o){let p=String((o.client&&(o.client.wa||o.client.phone))||"").replace(/\D/g,"");if(p.length===10)p="57"+p;return p;}
 function adminName(){return ((USERS[DB.admin.user]||{}).name||DB.admin.user||"Ventas").split(" ")[0];}
+function trackUrl(g){return "https://coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo-de-guia/?guia="+encodeURIComponent(String(g||"").trim());}
+function guiaDe(o){const g=o.dispatch&&o.dispatch.guide;return g&&g!=="Pendiente"&&g!=="Por asignar"?g:"";}
+function waDespachoMsg(o){const g=guiaDe(o);const f=o.dispatch&&o.dispatch.at?fdate(o.dispatch.at):fdate(new Date().toISOString());
+  return `Hola ${o.client.contact||o.client.name} 🌸 Tu pedido ${o.number} ya salió de Cultivo San Isidro (${f}) con Coordinadora Mercantil, flete contraentrega.\n${waLines(o)}\n\n`+(g?`Guía Coordinadora: ${g}\nRastrea tu envío aquí: ${trackUrl(g)}`:`En cuanto tengamos el número de guía te lo enviamos.`)+`\n\nTambién lo ves en cultivosanisidro.com/pedidos (Mis pedidos). ¡Gracias por tu compra!`;}
+function waPhoneOf(c){let p=String((c&&(c.wa||c.phone))||"").replace(/\D/g,"");if(p.length===10)p="57"+p;return p;}
+function waLinkTo(c,msg){return "https://wa.me/"+waPhoneOf(c)+"?text="+encodeURIComponent(msg);}
+function waDormidoMsg(cl){return `Hola ${cl.contact||cl.name} 🌸 Soy ${adminName()} de Cultivo San Isidro. Hace un tiempo no pides hortensias y esta semana tenemos muy buena disponibilidad. Puedes ver colores, precios y pedir en cultivosanisidro.com/pedidos, o dime por aquí qué necesitas y te lo separo. ¡Un abrazo!`;}
+function waRepetirMsg(cl,ult){return `Hola ${cl.contact||cl.name} 🌸 Soy ${adminName()} de Cultivo San Isidro. ¿Repetimos tu pedido de esta semana?`+(ult?` El último (${ult.number}) fue:\n${waLines(ult)}\n\n`:"\n")+`Lo confirmas en un clic en cultivosanisidro.com/pedidos/#/mis-pedidos con «Volver a pedir», o me dices por aquí qué cambias.`;}
+/* Hábitos de compra por cliente: último pedido, días sin pedir y cada cuántos días pide (promedio de los últimos pedidos) */
+function clientHabits(cl){
+  const os=DB.orders.filter(o=>o.clientId===cl.id&&o.state!=="Cancelado").slice().sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  const ult=os[0]||null;const dias=ult?Math.floor((Date.now()-new Date(ult.createdAt))/864e5):null;
+  let cada=null;if(os.length>=3){const ts=os.slice(0,6).map(o=>+new Date(o.createdAt));let s=0;for(let i=0;i<ts.length-1;i++)s+=ts[i]-ts[i+1];cada=Math.max(1,Math.round(s/(ts.length-1)/864e5));}
+  const seguido=cada!==null&&cada<=14;const leToca=seguido&&dias>=cada&&dias<=cada*3;const dormido=os.length>0&&dias>=30;
+  return {os,ult,dias,cada,seguido,leToca,dormido};
+}
 function waLines(o){return o.items.map(i=>{const c=colorById(i.colorId);return `• ${c?c.name:(i.name||i.colorId)} — ${i.size} × ${i.qty}`;}).join("\n");}
 function waConfirmMsg(o){const t=orderTotals(o);
   return `Hola ${o.client.contact||o.client.name} 🌸 Soy ${adminName()} de Cultivo San Isidro. Confirmamos la disponibilidad de tu pedido ${o.number}:\n${waLines(o)}\n\nTotal: ${money(t.total)}\nDespacho: ${dispatchText(o)} (Coordinadora, flete contraentrega)\n\n`+(o.payMode==="credito"?`Queda registrado a crédito según tu acuerdo comercial. ¡Gracias!`:`Para continuar, transfiere ${money(t.total)} a Bancolombia Ahorros 02368539395 (Daniel Piedrahita, C.C. 70.555.275) y envíanos el comprobante por este chat. ¡Gracias!`);}
@@ -1990,7 +2023,7 @@ function viewMisPedidos(){
         <td style="font-size:13px;white-space:nowrap">${(o.items||[]).map(i=>esc(i.name||i.colorId)+" · "+esc(i.size)+" × "+i.qty).join("<br>")}</td>
         <td class="num">${o.tallos||""}</td><td class="num"><b>${money(o.total||0)}</b></td>
         <td style="white-space:nowrap">${o.fecha_despacho?fmtDia(o.fecha_despacho):"—"}</td>
-        <td>${o.guia&&o.guia!=="Pendiente"&&o.guia!=="Por asignar"?`<b>${esc(o.guia)}</b><br><a href="https://www.coordinadora.com/" target="_blank" rel="noopener" style="font-size:12px">Rastrear en coordinadora.com</a>`:(["Despachado","En tránsito"].includes(o.estado)?"<small>Pendiente de asignar</small>":"—")}</td>
+        <td>${o.guia&&o.guia!=="Pendiente"&&o.guia!=="Por asignar"?`<b>${esc(o.guia)}</b><br><a href="${trackUrl(o.guia)}" target="_blank" rel="noopener" style="font-size:12px">Rastrear en coordinadora.com</a>`:(["Despachado","En tránsito"].includes(o.estado)?"<small>Pendiente de asignar</small>":"—")}</td>
         <td><span class="badge ${STATE_CLASS[o.estado]||""}">${esc(clientStateLabel(o.estado,o.guia))}</span></td>
         <td><button class="btn btn-soft btn-sm" data-mis-repeat="${ix}">Volver a pedir</button></td>
       </tr>`).join("")}</tbody>
@@ -2032,7 +2065,7 @@ function viewRapido(){
 /* ============================================================
    PANEL ADMINISTRATIVO
    ============================================================ */
-const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["guia","Guía de uso","📖"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
+const ADMIN_SECTIONS=[["dash","Dashboard","📊"],["guia","Guía de uso","📖"],["mes","Informe mensual","📅"],["pedidos","Pedidos","📦"],["pend","Sin terminar","🛒"],["fact","Facturación","🧾"],["orden","Orden de trabajo","📋"],["desp","Despacho","🚚"],["clientes","Clientes","👥"],["reclamos","Reclamos","⚠️"],["colores","Colores","🎨"],["precios","Precios","💲"],["ciudades","Ciudades","🏙"],["cierres","Días sin despacho","🚫"],["reportes","Reportes","📈"],["web","Audiencia web","🌐"]];
 function viewAdmin(){
   if(!DB.admin.user) return viewLogin();
   const role=ROLES[DB.admin.role];
@@ -2045,11 +2078,11 @@ function viewAdmin(){
     desp:DB.orders.filter(o=>["Facturado","En preparación","Listo para despacho","Despachado","En tránsito"].includes(o.state)).length,
     reclamos:DB.reclamos.filter(r=>r.estado==="Pendiente").length
   };
-  const body={dash:adDash,guia:adGuia,mes:adMes,pedidos:adPedidos,fact:adFact,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
+  const body={dash:adDash,guia:adGuia,mes:adMes,pedidos:adPedidos,fact:adFact,orden:adOrdenTrabajo,desp:adDesp,clientes:adClientes,reclamos:adReclamos,colores:adColores,precios:adPrecios,ciudades:adCiudades,cierres:adCierres,reportes:adReportes,web:adWeb,pend:adPend}[sec]();
   return `<div class="admin-shell">
     <aside class="admin-side">
       <div class="who"><b>${esc(DB.admin.user)}</b><small>${role.name}</small></div>
-      ${(()=>{const EXTRA=["mes","colores","precios","ciudades","reportes","web"];const vis=ADMIN_SECTIONS.filter(s=>role.sections.includes(s[0]));const item=s=>`<a href="#/admin" data-sec="${s[0]}" class="${sec===s[0]?"on":""}"><span class="ic">${s[2]}</span>${s[1]}${counts[s[0]]?`<span class="cnt">${counts[s[0]]}</span>`:""}</a>`;const abierto=DB.admin.menuMore||EXTRA.includes(sec);return vis.filter(s=>!EXTRA.includes(s[0])).map(item).join("")+`<a href="#/admin" data-menu-more style="opacity:.8"><span class="ic">${abierto?"▾":"▸"}</span>Más (catálogo e informes)</a>`+(abierto?vis.filter(s=>EXTRA.includes(s[0])).map(item).join(""):"");})()}
+      ${(()=>{const EXTRA=["mes","colores","precios","ciudades","cierres","reportes","web"];const vis=ADMIN_SECTIONS.filter(s=>role.sections.includes(s[0]));const item=s=>`<a href="#/admin" data-sec="${s[0]}" class="${sec===s[0]?"on":""}"><span class="ic">${s[2]}</span>${s[1]}${counts[s[0]]?`<span class="cnt">${counts[s[0]]}</span>`:""}</a>`;const abierto=DB.admin.menuMore||EXTRA.includes(sec);return vis.filter(s=>!EXTRA.includes(s[0])).map(item).join("")+`<a href="#/admin" data-menu-more style="opacity:.8"><span class="ic">${abierto?"▾":"▸"}</span>Más (catálogo e informes)</a>`+(abierto?vis.filter(s=>EXTRA.includes(s[0])).map(item).join(""):"");})()}
       <a href="#/admin" data-logout style="margin-top:8px;opacity:.75">← Cerrar sesión</a>
     </aside>
     <div class="admin-main">${notifBar()}${body}</div>
@@ -2100,14 +2133,17 @@ function adTareas(){
   const total=porConfirmar.length+porPago.length+porFacturar.length+porDespachar.length+enCamino.length;
   const abrir=o=>`<button class="btn btn-soft btn-sm" data-open-order="${o.id}">Ver</button>`;
   const sinGuia=o=>!(o.dispatch&&o.dispatch.guide&&o.dispatch.guide!=="Pendiente"&&o.dispatch.guide!=="Por asignar");
+  const diasSinPago=o=>{let t=o.confirmedAt;if(!t){const hh=(o.history||[]).filter(x=>/Disponibilidad confirmada/.test(x.event)).pop();t=hh?hh.at:o.createdAt;}return Math.floor((Date.now()-new Date(t))/864e5);};
+  const leToca=DB.clients.map(cl=>({cl,h:clientHabits(cl)})).filter(x=>x.h.leToca).slice(0,8);
   return `<div class="card card-pad" style="margin-bottom:22px;border-left:4px solid var(--forest)">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-size:19px;color:var(--forest)">✅ Pendientes de hoy</h3><small style="color:var(--ink-faint)">${total?total+" pedido"+(total!==1?"s":"")+" en proceso":"Todo al día"}</small></div>
     ${total||porCobrar.length?"":`<p style="margin:10px 0 0;color:var(--ink-soft);font-size:14px">No hay pedidos pendientes. Cuando entre uno, aparece aquí con el botón de lo que toca hacer.</p>`}
     ${grupo("1 · Confirmar disponibilidad (el cliente espera tu WhatsApp)",porConfirmar,o=>`<button class="btn btn-primary btn-sm" data-confirm-avail="${o.id}">✓ Confirmar y avisar por WhatsApp</button><button class="btn btn-hydr btn-sm" data-propose="${o.id}">✎ Proponer cambio</button>`+abrir(o))}
-    ${grupo("2 · Esperando el pago del cliente",porPago,o=>`<button class="btn btn-primary btn-sm" data-act="Pago confirmado" data-oid="${o.id}">💳 Registrar pago recibido</button><a class="btn btn-soft btn-sm" target="_blank" rel="noopener" href="${waLink(o,waRecordatorioMsg(o))}">💬 Recordar pago</a>`+abrir(o))}
+    ${grupo("2 · Esperando el pago del cliente"+(porPago.filter(o=>diasSinPago(o)>=1).length?` · <span style="color:var(--danger)">${porPago.filter(o=>diasSinPago(o)>=1).length} con más de un día sin pagar</span>`:""),porPago,o=>{const dd=diasSinPago(o);return (dd>=1?`<span style="font-size:13px;color:var(--danger);font-weight:700;align-self:center">⏰ ${dd} día${dd===1?"":"s"} sin pago</span>`:`<span style="font-size:13px;color:var(--ink-faint);align-self:center">confirmado hoy</span>`)+`<button class="btn ${dd>=1?"btn-hydr":"btn-soft"} btn-sm" onclick="window.open(this.dataset.href,'_blank')" data-href="${waLink(o,waRecordatorioMsg(o))}">💬 Recordar pago</button><button class="btn btn-primary btn-sm" data-act="Pago confirmado" data-oid="${o.id}">💳 Registrar pago recibido</button>`+abrir(o);})}
     ${grupo("3 · Por facturar",porFacturar,o=>`<button class="btn btn-primary btn-sm" data-goto-fact>🧾 Facturar</button>`+abrir(o))}
     ${grupo("4 · Facturados: imprimir orden de trabajo y despachar",porDespachar,o=>`<button class="btn btn-soft btn-sm" data-sec="orden">🖨 Orden de trabajo</button><button class="btn btn-primary btn-sm" data-goto-desp>🚚 Despachar</button>`+abrir(o))}
-    ${grupo("5 · En camino",enCamino,o=>(sinGuia(o)?`<button class="btn btn-hydr btn-sm" data-goto-desp>Nº de guía pendiente</button>`:"")+(o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:"")+`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`+abrir(o))}
+    ${grupo("5 · En camino",enCamino,o=>(sinGuia(o)?`<button class="btn btn-hydr btn-sm" data-goto-desp>Nº de guía pendiente</button>`:`<a class="btn btn-hydr btn-sm" target="_blank" rel="noopener" href="${waLink(o,waDespachoMsg(o))}">💬 Avisar al cliente</a>`)+(o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:"")+`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`+abrir(o))}
+    ${leToca.length?`<div style="margin-top:14px"><div class="eyebrow" style="margin-bottom:2px">🔁 Clientes que piden seguido y les toca esta semana (${leToca.length})</div>${leToca.map(({cl,h})=>`<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:200px"><b>${esc(cl.name)}</b> · ${esc(cl.city||"")}<br><small style="color:var(--ink-faint)">pide cada ~${h.cada} días · último pedido hace ${h.dias} días (${h.ult?h.ult.number:""})</small></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-hydr btn-sm" target="_blank" rel="noopener" href="${waLinkTo(cl,waRepetirMsg(cl,h.ult))}">💬 ¿Repetimos tu pedido?</a><button class="btn btn-soft btn-sm" data-client="${cl.id}">Ver cliente</button></div></div>`).join("")}</div>`:""}
     ${grupo("💳 Créditos por cobrar",porCobrar,o=>`<span style="font-size:13px;color:var(--danger);font-weight:700;align-self:center">Saldo ${money(orderTotals(o).saldo)}</span><button class="btn btn-hydr btn-sm" data-open-order="${o.id}">➕ Abono</button><button class="btn btn-soft btn-sm" data-credit-paid="${o.id}">💳 Pagó todo</button>`)}
   </div>`;
 }
@@ -2283,8 +2319,9 @@ function adGuia(){
   ${paso(4,"Facturar (Facturación)","En <b>Facturación</b> hay una tarjeta por pedido. Factura como siempre — <b>World Office</b> si lleva IVA, o la <b>plantilla de Excel</b> — (si quieres, «⬇ Exportar» descarga un .csv con los datos del pedido). Escribe el <b>número de factura</b> (y el descuento y el transporte si los hay) y pulsa <b>«✓ Marcar facturado»</b>. El pedido pasa a <b>Despacho</b> y aparece en la <b>Orden de trabajo</b>. Luego, en «Facturas registradas» (o en el detalle del pedido), <b>«🧾 Factura PDF»</b> abre la factura ya llena con el formato de la macro para guardarla como PDF (Imprimir → Guardar como PDF) y enviársela al cliente. Antes de facturar, <b>«📄 Cuenta de cobro PDF»</b> hace lo mismo sin número.")}
   ${paso(5,"Imprimir la orden de trabajo","En <b>Orden de trabajo</b> están todos los pedidos facturados con cliente, color, grado, cantidad y día de despacho. Pulsa <b>«🖨 Imprimir»</b> y entrégala a quien prepara las flores.")}
   ${paso(6,"Despachar (Jorge / Despacho)","En <b>Despacho</b>, en «Listos para despachar», escribe el <b>número de guía</b> de Coordinadora si ya lo tienes y pulsa <b>«🚚 Registrar despacho»</b>. Si la guía llega después, regístrala en «En camino» con <b>«Guardar guía»</b>: el cliente la ve al instante en <b>Mis pedidos</b>. Luego marca <b>«En tránsito»</b> y, cuando el cliente reciba, <b>«✓ Entregado»</b>.")}
-  ${paso(7,"Cobrar un crédito (abonos)","Los pedidos a crédito (o avanzados con pago pendiente) muestran su <b>saldo</b>. Abre el pedido: en <b>Cartera · Abonos</b> escribes el valor que pagó y pulsas <b>«➕ Registrar abono»</b> (puedes registrar varios); cuando el saldo llega a cero el pedido queda pagado. Si paga todo de una vez, <b>«💳 Pagó todo»</b>. En Facturación puedes anotar el <b>transporte cobrado</b> en la factura: se suma al total del pedido.")}
-  ${paso(8,"Colores, disponibilidad y precios","En <b>Más → Colores</b> puedes marcar un color como <b>Disponible / Pocas unidades / Agotado</b>, desactivarlo o cambiar su precio por grado; en <b>Más → Precios</b> cambias la tabla general. Todo se guarda en la base de datos y se refleja de inmediato en lo que ve el cliente.")}
+  ${paso(7,"Avisar el despacho y bloquear días","Cuando Jorge guarda la guía, en Despacho → «En camino» (y en el detalle) aparece <b>«💬 Avisar al cliente»</b>: abre WhatsApp con el pedido, la guía y el enlace directo de rastreo en Coordinadora. En Pendientes de hoy, el grupo «Esperando el pago» muestra cuántos días lleva cada pedido sin pagar y el botón de recordar; abajo aparecen los clientes que piden seguido y a los que «les toca» (botón «¿Repetimos tu pedido?»). En Clientes puedes filtrar <b>Sin pedir hace 30+ días</b> (botón «Reactivar») y <b>Piden seguido</b>. En Más → <b>Días sin despacho</b> bloqueas fechas (inventario, feria): el cliente las ve apagadas; el 24 y 31 de diciembre ya están cerrados.")}
+${paso(8,"Cobrar un crédito (abonos)","Los pedidos a crédito (o avanzados con pago pendiente) muestran su <b>saldo</b>. Abre el pedido: en <b>Cartera · Abonos</b> escribes el valor que pagó y pulsas <b>«➕ Registrar abono»</b> (puedes registrar varios); cuando el saldo llega a cero el pedido queda pagado. Si paga todo de una vez, <b>«💳 Pagó todo»</b>. En Facturación puedes anotar el <b>transporte cobrado</b> en la factura: se suma al total del pedido.")}
+  ${paso(9,"Colores, disponibilidad y precios","En <b>Más → Colores</b> puedes marcar un color como <b>Disponible / Pocas unidades / Agotado</b>, desactivarlo o cambiar su precio por grado; en <b>Más → Precios</b> cambias la tabla general. Todo se guarda en la base de datos y se refleja de inmediato en lo que ve el cliente.")}
   <div class="card card-pad" style="margin-top:18px"><b>Buscar y exportar</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">En <b>Pedidos</b> puedes buscar por número, cliente, ciudad o fecha, filtrar por estado y descargar <b>«⬇ Exportar CSV»</b> (una fila por color, con grado, cantidad, precio y día de despacho; se abre en Excel). <b>Clientes</b> muestra el historial de cada cliente y si tiene crédito. <b>Reclamos</b> registra y aprueba reclamaciones.</div></div>
   <div class="card card-pad" style="margin-top:12px"><b>Si algo no abre o se ve raro</b><div style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-top:4px">Recarga la página (F5) o cierra sesión y vuelve a entrar. Los pedidos viven en la base de datos: no se pierden al recargar.</div></div>`;
 }
@@ -2325,6 +2362,7 @@ function renderDrawer(){
   if(o.state==="Pendiente de facturación"&&(can("fact")||role==="admin")) acts.push(`<button class="btn btn-hydr" data-goto-fact>🧾 Ir a facturación →</button>`);
   if(!["Pedido recibido","Cancelado"].includes(o.state)) acts.push(`<button class="btn btn-soft" data-factura-pdf="${o.id}">${o.invoice?"🧾 Factura PDF":"📄 Cuenta de cobro PDF"}</button>`);
   if(["Facturado","En preparación","Listo para despacho"].includes(o.state)&&(can("desp")||role==="admin")){acts.push(`<button class="btn btn-soft" data-sec="orden">🖨 Orden de trabajo</button>`);acts.push(`<button class="btn btn-primary" data-goto-desp>🚚 Ir a despacho →</button>`);}
+  if(["Despachado","En tránsito"].includes(o.state)) acts.push(`<a class="btn btn-hydr" target="_blank" rel="noopener" href="${waLink(o,waDespachoMsg(o))}">💬 Avisar despacho por WhatsApp${guiaDe(o)?" (con guía)":""}</a>`);
   if(o.state==="Despachado") acts.push(`<button class="btn btn-soft" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`);
   if(o.state==="En tránsito") acts.push(`<button class="btn btn-primary" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`);
   if(["Pedido recibido","Pago por verificar","Pago confirmado","Pendiente de facturación"].includes(o.state)&&["admin","ventas","fact"].includes(role)&&DB.ui.editOrder!==o.id) acts.push(`<button class="btn btn-soft" data-edit-order="${o.id}">✏️ Editar pedido</button>`);
@@ -2628,11 +2666,39 @@ function adDesp(){
       <td style="white-space:nowrap"><b>${o.number}</b></td><td>${esc(o.client.name)}</td><td>${esc(o.shipping.city)}</td>
       <td style="white-space:nowrap">${conGuia(o)&&DB.ui.guideEdit!==o.id?`<b>${esc(o.dispatch.guide)}</b> <button class="btn btn-ghost btn-sm" data-guide-edit="${o.id}" title="Corregir guía">✎</button>`:`<input placeholder="Nº de guía" value="${conGuia(o)?esc(o.dispatch.guide):""}" data-g-input="${o.id}" style="width:140px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px"> <button class="btn btn-hydr btn-sm" data-guide-save="${o.id}">Guardar guía</button>`}</td><td>${o.dispatch?fdt(o.dispatch.at):"—"}</td>
       <td><span class="badge ${STATE_CLASS[o.state]}">${o.state}</span></td>
-      <td>${o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`}</td>
+      <td style="white-space:nowrap"><a class="btn btn-hydr btn-sm" target="_blank" rel="noopener" href="${waLink(o,waDespachoMsg(o))}" title="${guiaDe(o)?"Enviar guía y enlace de rastreo":"Avisar que salió (sin guía aún)"}">💬 Avisar al cliente</a> ${o.state==="Despachado"?`<button class="btn btn-soft btn-sm" data-act="En tránsito" data-oid="${o.id}">En tránsito</button>`:`<button class="btn btn-primary btn-sm" data-act="Entregado" data-oid="${o.id}">✓ Entregado</button>`}</td>
     </tr>`).join("")||'<tr><td colspan="7" style="color:var(--ink-faint);text-align:center;padding:24px">Sin envíos en camino.</td></tr>'}</tbody>
   </table></div></div>`;
 }
 
+/* ---------- Días sin despacho (bloqueo manual) ---------- */
+function cierreMonthShown(){const hoy=bogotaNow();const minM=new Date(hoy.getFullYear(),hoy.getMonth(),1);const maxM=new Date(hoy.getFullYear(),hoy.getMonth()+12,1);
+  let m=DB.admin.cierreMonth?parseISODay(DB.admin.cierreMonth+"-01"):minM;if(!m||m<minM)m=minM;if(m>maxM)m=maxM;return m;}
+function adCierres(){
+  const first=cierreMonthShown();const hoy=bogotaNow();const hoyIso=isoLocal(hoy);
+  const minM=new Date(hoy.getFullYear(),hoy.getMonth(),1);const maxM=new Date(hoy.getFullYear(),hoy.getMonth()+12,1);
+  const hol=colHolidays(first.getFullYear());const title=first.toLocaleDateString("es-CO",{month:"long",year:"numeric"});
+  let cells="";for(let i=0;i<(first.getDay()+6)%7;i++)cells+='<span class="dp-cell"></span>';
+  const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();
+  for(let d=1;d<=days;d++){const dt=new Date(first.getFullYear(),first.getMonth(),d);const iso=isoLocal(dt);const w=dt.getDay();
+    const fest=hol.has(iso),fin=w===0||w===6,fijo=esCierreFijo(iso),pasado=iso<hoyIso,blk=BLOQUEOS.has(iso);
+    if(fest||fin||fijo||pasado){cells+=`<span class="dp-cell dp-off${fest?" dp-fest":""}" title="${fest?"Festivo":fin?"Fin de semana":fijo?"Cerrado fijo (24 y 31 de diciembre)":"Ya pasó"}">${d}</span>`;continue;}
+    cells+=`<button type="button" class="dp-cell dp-day${blk?" dp-blk":""}" data-cierre-toggle="${iso}" title="${blk?"Clic para volver a abrir este día":"Clic para bloquear este día"}">${d}</button>`;}
+  const lista=[...BLOQUEOS].filter(x=>x>=hoyIso).sort();
+  return `<h2>Días sin despacho</h2>
+  <p class="admin-sub">Los sábados, domingos, festivos y el 24 y 31 de diciembre ya están cerrados. Aquí puedes <b>bloquear otros días</b> (inventario, feria, mantenimiento…): el cliente los verá apagados en el calendario y no podrá elegirlos. Haz clic en un día para bloquearlo y otra vez para abrirlo.</p>
+  <div class="grid-2" style="gap:18px;align-items:start">
+    <div class="card card-pad"><div class="dp" style="max-width:none;border:0;padding:0">
+      <div class="dp-head"><button type="button" class="dp-nav" data-cierre-nav="-1"${first>minM?"":" disabled"}>‹</button><b>${title.charAt(0).toUpperCase()+title.slice(1)}</b><button type="button" class="dp-nav" data-cierre-nav="1"${first<maxM?"":" disabled"}>›</button></div>
+      <div class="dp-grid">${["L","M","M","J","V","S","D"].map(x=>`<span class="dp-wd">${x}</span>`).join("")}${cells}</div>
+      <div class="dp-leg"><span><i class="dp-sw dp-sw-ok"></i> Despachamos</span><span><i class="dp-sw dp-sw-blk"></i> Bloqueado por ventas</span><span><i class="dp-sw dp-sw-off"></i> Fin de semana / cerrado</span><span><i class="dp-sw dp-sw-fest"></i> Festivo</span></div>
+    </div></div>
+    <div class="card card-pad"><h4 style="font-size:13px;color:var(--ink-soft)">DÍAS BLOQUEADOS (${lista.length})</h4>
+      ${lista.length?`<ul style="list-style:none;margin:10px 0 0;padding:0">${lista.map(x=>`<li style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><span>${fmtDia(x)} <small style="color:var(--ink-faint)">${x.slice(0,4)}</small></span><button class="btn btn-ghost btn-sm" data-cierre-toggle="${x}" title="Volver a abrir">✕ Abrir</button></li>`).join("")}</ul>`:`<p style="color:var(--ink-faint);font-size:14px;margin:10px 0 0">Ningún día bloqueado. Solo aplican los cierres de siempre.</p>`}
+      <p style="font-size:12.5px;color:var(--ink-faint);margin:14px 0 0">Los cambios se guardan de inmediato y aplican para todos los clientes${DB.ui.catalogoOk?"":" (se necesita conexión con la base de datos)"}.</p>
+    </div>
+  </div>`;
+}
 /* ---------- Clientes ---------- */
 function adClientes(){
   const sel=DB.ui.clientSel;
@@ -2665,16 +2731,27 @@ function adClientes(){
       <tbody>${os.map(o=>{const t=orderTotals(o);return `<tr data-open-order="${o.id}" style="cursor:pointer"><td style="white-space:nowrap"><b>${o.number}</b></td><td>${fdate(o.createdAt)}</td><td class="num">${t.stems}</td><td class="num">${money(t.total)}</td><td><span class="badge ${STATE_CLASS[o.state]}">${o.state}</span></td></tr>`;}).join("")}</tbody>
     </table></div></div>`;
   }
+  const filtro=DB.admin.clientFilter||"todos";
+  const rows=DB.clients.map(cl=>({cl,h:clientHabits(cl)}));
+  const dormidos=rows.filter(x=>x.h.dormido),seguidos=rows.filter(x=>x.h.seguido);
+  const lista=filtro==="dormidos"?dormidos.slice().sort((a,b)=>b.h.dias-a.h.dias):filtro==="seguidos"?seguidos.slice().sort((a,b)=>(b.h.leToca?1:0)-(a.h.leToca?1:0)||b.h.dias-a.h.dias):rows;
   return `
   <h2>Clientes</h2>
   <p class="admin-sub">${DB.clients.length} clientes registrados · clic para ver historial y hábitos de compra</p>
+  <div class="action-row" style="margin:0 0 14px">
+    <button class="btn btn-sm ${filtro==="todos"?"btn-hydr":"btn-soft"}" data-client-filter="todos">Todos (${rows.length})</button>
+    <button class="btn btn-sm ${filtro==="dormidos"?"btn-hydr":"btn-soft"}" data-client-filter="dormidos">😴 Sin pedir hace 30+ días (${dormidos.length})</button>
+    <button class="btn btn-sm ${filtro==="seguidos"?"btn-hydr":"btn-soft"}" data-client-filter="seguidos">🔁 Piden seguido (${seguidos.length})</button>
+  </div>
+  ${filtro==="dormidos"?`<p class="admin-sub" style="margin:-6px 0 12px">Clientes que compraron alguna vez y llevan más de un mes sin pedir. El botón abre WhatsApp con un mensaje listo para reactivarlos.</p>`:filtro==="seguidos"?`<p class="admin-sub" style="margin:-6px 0 12px">Clientes con 3 o más pedidos que piden cada 14 días o menos. Cuando ya pasó su ciclo, aparecen primero con «les toca» y el botón abre WhatsApp con su último pedido para repetirlo.</p>`:""}
   <div class="card"><div class="tbl-scroll"><table class="tbl">
-    <thead><tr><th>Cliente</th><th>Tipo</th><th>Ciudad</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th>Último pedido</th></tr></thead>
-    <tbody>${DB.clients.map(cl=>{
-      const os=DB.orders.filter(o=>o.clientId===cl.id&&o.state!=="Cancelado");
-      const total=os.reduce((a,o)=>a+orderTotals(o).total,0);
-      return `<tr data-client="${cl.id}" style="cursor:pointer"><td><b>${esc(cl.name)}</b> ${cl.credit?'<span class="badge st-fact" style="font-size:10px">CRÉDITO</span>':""}<br><small style="color:var(--ink-faint)">${esc(cl.contact||"")}</small></td><td>${esc(cl.type||"—")}</td><td>${esc(cl.city||"—")}</td><td class="num">${os.length}</td><td class="num"><b>${money(total)}</b></td><td>${os.length?fdate(os[0].createdAt):"—"}</td></tr>`;
-    }).join("")}</tbody>
+    <thead><tr><th>Cliente</th><th>Tipo</th><th>Ciudad</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th>Último pedido</th><th>Hábito</th><th></th></tr></thead>
+    <tbody>${lista.map(({cl,h})=>{
+      const os=h.os;const total=os.reduce((a,o)=>a+orderTotals(o).total,0);
+      const habito=h.cada?`cada ~${h.cada} días`+(h.leToca?` · <b style="color:var(--danger)">le toca</b>`:""):(h.dormido?`<span style="color:var(--warn)">sin pedir hace ${h.dias} días</span>`:(h.dias!==null?`hace ${h.dias} días`:"—"));
+      const wa=waPhoneOf(cl)?(h.seguido?`<a class="btn btn-hydr btn-sm" target="_blank" rel="noopener" href="${waLinkTo(cl,waRepetirMsg(cl,h.ult))}" onclick="event.stopPropagation()">💬 ¿Repetimos?</a>`:h.dormido?`<a class="btn btn-hydr btn-sm" target="_blank" rel="noopener" href="${waLinkTo(cl,waDormidoMsg(cl))}" onclick="event.stopPropagation()">💬 Reactivar</a>`:""):"";
+      return `<tr data-client="${cl.id}" style="cursor:pointer"><td><b>${esc(cl.name)}</b> ${cl.credit?'<span class="badge st-fact" style="font-size:10px">CRÉDITO</span>':""}<br><small style="color:var(--ink-faint)">${esc(cl.contact||"")}</small></td><td>${esc(cl.type||"—")}</td><td>${esc(cl.city||"—")}</td><td class="num">${os.length}</td><td class="num"><b>${money(total)}</b></td><td>${h.ult?fdate(h.ult.createdAt):"—"}</td><td style="font-size:13px">${habito}</td><td>${wa}</td></tr>`;
+    }).join("")||`<tr><td colspan="8" style="color:var(--ink-faint);text-align:center;padding:24px">Nadie en esta lista.</td></tr>`}</tbody>
   </table></div></div>`;
 }
 /* ---------- Reclamos y descartes ---------- */
@@ -2904,7 +2981,7 @@ function exportOrders(){
    EVENTOS
    ============================================================ */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-dp-day],[data-dp-nav],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-factura-pdf],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
+  const t=e.target.closest("[data-open-color],[data-close-modal],[data-add-modal],[data-q],[data-fav],[data-goto-cart],[data-step],[data-dp-day],[data-dp-nav],[data-cierre-toggle],[data-cierre-nav],[data-client-filter],[data-cq],[data-crm],[data-clear-search],[data-fam],[data-demo-client],[data-rm-receipt],[data-submit-order],[data-new-order],[data-repeat],[data-fav-add],[data-fav-rm],[data-qr-add],[data-qr-rm],[data-qr-cart],[data-sec],[data-logout],[data-open-order],[data-close-drawer],[data-act],[data-oid],[data-fact-ok],[data-dispatch],[data-client],[data-client-back],[data-col-edit],[data-col-new],[data-col-back],[data-col-save],[data-col-del],[data-col-more],[data-apply-base],[data-city-add],[data-city-rm],[data-export-general],[data-export-fact],[data-export-orders],[data-factura-pdf],[data-abono-add],[data-confirm-avail],[data-propose],[data-propose-send],[data-propose-close],[data-guide-save],[data-guide-edit],[data-mis-buscar],[data-mis-repeat],[data-toggle-fin],[data-menu-more],[data-goto-fact],[data-export-fact-one],[data-edit-order],[data-ed-add],[data-ed-rm],[data-ed-save],[data-ed-cancel],[data-notif-open],[data-notif-x],[data-goto-desp],[data-credit-paid],[data-client-credit],[data-export-mes],[data-except],[data-print],[data-reclamo-new],[data-reclamo-back],[data-reclamo-filter],[data-reclamo-save],[data-reclamo-act]");
   if(!t)return;
   const d=t.dataset;
 
@@ -2999,6 +3076,15 @@ document.addEventListener("click",async e=>{
   }
   if(d.menuMore!==undefined){e.preventDefault();DB.admin.menuMore=!DB.admin.menuMore;render();return;}
   if(d.toggleFin!==undefined){DB.admin.showFin=!DB.admin.showFin;render();return;}
+  if(d.clientFilter!==undefined){DB.admin.clientFilter=d.clientFilter;render();return;}
+  if(d.cierreNav!==undefined){const m=cierreMonthShown();m.setMonth(m.getMonth()+(+d.cierreNav));DB.admin.cierreMonth=isoLocal(m).slice(0,7);render();return;}
+  if(d.cierreToggle!==undefined){
+    const iso=d.cierreToggle;const antes=new Set(BLOQUEOS);
+    if(BLOQUEOS.has(iso))BLOQUEOS.delete(iso);else BLOQUEOS.add(iso);
+    render();
+    sbSaveCatalogo("_bloqueos",{dias:[...BLOQUEOS].sort()}).then(ok=>{if(ok)toast(BLOQUEOS.has(iso)?"Día bloqueado: "+fmtDia(iso):"Día abierto de nuevo: "+fmtDia(iso));else{BLOQUEOS=antes;render();}});
+    return;
+  }
   if(d.sec!==undefined){e.preventDefault();DB.admin.section=d.sec;DB.ui.drawer=null;DB.ui.clientSel=null;DB.ui.colEdit=null;render();return;}
   if(d.logout!==undefined){e.preventDefault();DB.admin.user=null;SB_SESSION=null;try{sessionStorage.removeItem("si_auth");sessionStorage.removeItem("si_sb")}catch(_){ }render();return;}
   if(d.openOrder!==undefined){DB.ui.drawer=d.openOrder;render();return;}
@@ -3014,7 +3100,7 @@ document.addEventListener("click",async e=>{
     const quien=DB.admin.user+" ("+ROLES[DB.admin.role].name+")";
     const url=waLink(o,waConfirmMsg(o));
     if(o.payMode==="credito"){pushHistory(o,"Disponibilidad confirmada — aviso enviado por WhatsApp (crédito)",quien);applyState(o,"Pendiente de facturación",quien,true);}
-    else{o.state="Pago por verificar";pushHistory(o,"Disponibilidad confirmada — aviso y datos de pago enviados por WhatsApp; esperando la transferencia",quien);}
+    else{o.state="Pago por verificar";o.confirmedAt=new Date().toISOString();pushHistory(o,"Disponibilidad confirmada — aviso y datos de pago enviados por WhatsApp; esperando la transferencia",quien);}
     DB.ui.propose=null;
     window.open(url,"_blank");
     toast("Pedido "+o.number+" confirmado — se abrió WhatsApp con el mensaje para el cliente");render();return;
@@ -3035,6 +3121,7 @@ document.addEventListener("click",async e=>{
     if(!g){toast("Escribe el número de guía",true);return;}
     o.dispatch=o.dispatch||{carrier:"Coordinadora Mercantil",at:new Date().toISOString(),by:DB.admin.user,payMode:"Contraentrega"};
     o.dispatch.guide=g;pushHistory(o,"Guía Coordinadora registrada: "+g,DB.admin.user+" ("+ROLES[DB.admin.role].name+")");
+    setTimeout(()=>toast("Guía guardada. Pulsa «💬 Avisar al cliente» para enviarle la guía y el rastreo por WhatsApp"),50);
     DB.ui.guideEdit=null;toast("Guía "+g+" guardada — el cliente ya la ve en «Mis pedidos»");render();return;
   }
   if(d.misBuscar!==undefined){
